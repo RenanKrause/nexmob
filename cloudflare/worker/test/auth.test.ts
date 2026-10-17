@@ -75,8 +75,8 @@ describe('authenticateInstallation', () => {
     const qrToken = crypto.randomUUID().replaceAll('-', '');
     await env.DB.prepare('INSERT INTO projects (id, installation_id) VALUES (?, ?)')
       .bind('project-a', 'installation-a').run();
-    await env.DB.prepare('INSERT INTO piece_tokens (token, project_id, logical_key) VALUES (?, ?, ?)')
-      .bind(qrToken, 'project-a', 'module-a:left').run();
+    await env.DB.prepare('INSERT INTO piece_tokens (token, project_id, module_id, logical_key) VALUES (?, ?, ?, ?)')
+      .bind(qrToken, 'project-a', 'module-a', 'left').run();
     expect(await authenticateInstallation(request(`Bearer ${qrToken}`), env)).toBeNull();
   });
 

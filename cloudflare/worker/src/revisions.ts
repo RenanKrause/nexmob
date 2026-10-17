@@ -42,11 +42,12 @@ export async function publishRevision(env: Env, installation: Installation, valu
   // One bound JSON array avoids a query per piece (D1 Free permits 50 queries
   // per invocation), and keeps the token write inside the publication batch.
   const tokenIndex = JSON.stringify(revision.modules.flatMap((module) => module.pieces.map((piece) => ({
-    token: piece.qr_token.toLowerCase(), logical_key: piece.logical_key,
+    token: piece.qr_token.toLowerCase(), module_id: module.module_id, logical_key: piece.logical_key,
   }))));
   const conflict = await env.DB.prepare(`SELECT t.token FROM json_each(?) p
     JOIN piece_tokens t ON t.token = json_extract(p.value, '$.token')
-    WHERE t.project_id <> ? OR t.logical_key <> json_extract(p.value, '$.logical_key') LIMIT 1`)
+    WHERE t.project_id <> ? OR t.module_id <> json_extract(p.value, '$.module_id')
+      OR t.logical_key <> json_extract(p.value, '$.logical_key') LIMIT 1`)
     .bind(tokenIndex, revision.project_id).first();
   if (conflict) throw new ApiError(409, 'token_conflict');
 
@@ -78,11 +79,12 @@ export async function publishRevision(env: Env, installation: Installation, valu
           ELSE NULL END`).bind(revision.project_id, installation.id),
       env.DB.prepare('INSERT INTO revisions (id, project_id, synced_at, r2_key) VALUES (?, ?, ?, ?)')
         .bind(revision.revision_id, revision.project_id, revision.synced_at, key),
-      env.DB.prepare(`INSERT INTO piece_tokens (token, project_id, logical_key)
-        SELECT json_extract(value, '$.token'), ?, json_extract(value, '$.logical_key')
+      env.DB.prepare(`INSERT INTO piece_tokens (token, project_id, module_id, logical_key)
+        SELECT json_extract(value, '$.token'), ?, json_extract(value, '$.module_id'), json_extract(value, '$.logical_key')
         FROM json_each(?) WHERE true
         ON CONFLICT(token) DO UPDATE SET logical_key = CASE
-          WHEN piece_tokens.project_id = excluded.project_id AND piece_tokens.logical_key = excluded.logical_key
+          WHEN piece_tokens.project_id = excluded.project_id AND piece_tokens.module_id = excluded.module_id
+            AND piece_tokens.logical_key = excluded.logical_key
           THEN excluded.logical_key ELSE NULL END`)
         .bind(revision.project_id, tokenIndex),
       env.DB.prepare('UPDATE projects SET current_revision_id = ? WHERE id = ? AND installation_id = ?')
@@ -104,10 +106,12 @@ export interface PublicPieceResponse {
 
 export async function readPublicPiece(env: Env, token: string): Promise<PublicPieceResponse> {
   if (!/^[0-9a-f]{32}$/i.test(token)) throw new ApiError(404, 'not_found');
-  const row = await env.DB.prepare(`SELECT r.r2_key, r.project_id, r.id FROM piece_tokens t
+  const row = await env.DB.prepare(`SELECT r.r2_key, r.project_id, r.id, t.module_id, t.logical_key FROM piece_tokens t
     JOIN projects p ON p.id = t.project_id
     JOIN revisions r ON r.project_id = p.id AND r.id = p.current_revision_id
-    WHERE t.token = ?`).bind(token).first<{ r2_key: string; project_id: string; id: string }>();
+    WHERE t.token = ?`).bind(token).first<{
+      r2_key: string; project_id: string; id: string; module_id: string; logical_key: string;
+    }>();
   if (!row) throw new ApiError(404, 'not_found');
   const object = await env.REVISIONS.get(row.r2_key);
   if (!object) throw new ApiError(503, 'storage_unavailable');
@@ -116,7 +120,9 @@ export async function readPublicPiece(env: Env, token: string): Promise<PublicPi
     throw new ApiError(503, 'storage_unavailable');
   }
   for (const module of value.modules) {
-    const piece = module.pieces.find((candidate) => candidate.qr_token.toLowerCase() === token.toLowerCase());
+    if (module.module_id !== row.module_id) continue;
+    const piece = module.pieces.find((candidate) => candidate.qr_token.toLowerCase() === token.toLowerCase()
+      && candidate.logical_key === row.logical_key);
     if (piece) return { module, selected_piece_key: piece.logical_key, synced_at: value.synced_at };
   }
   // Token history stays reserved, but removed pieces do not resolve publicly.

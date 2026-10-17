@@ -253,6 +253,57 @@ describe('revision HTTP API', () => {
     expect((await current())?.current_revision_id).toBe(fixture.revision_id);
   });
 
+  it('never moves an existing QR from module-a1 to an unrelated replacement module with the same logical key', async () => {
+    expect((await post()).status).toBe(201);
+    const replacement = revision();
+    replacement.revision_id = 'replacement-furniture';
+    replacement.modules[0].module_id = 'unrelated-replacement-module';
+    replacement.modules[0].name = 'Unrelated replacement furniture';
+    const response = await post(replacement);
+    expect(response.status).toBe(409);
+    expect((await current())?.current_revision_id).toBe(fixture.revision_id);
+    expect(await env.DB.prepare("SELECT id FROM revisions WHERE id = 'replacement-furniture'").first()).toBeNull();
+    expect(await (await get()).json()).toMatchObject({ module: { module_id: 'module-a1', name: 'Balcão inferior' } });
+  });
+
+  it('keeps the same QR on the same module and logical key through normal dimension and name updates', async () => {
+    expect((await post()).status).toBe(201);
+    const update = revision();
+    update.revision_id = 'same-furniture-updated';
+    update.synced_at = '2026-10-17T18:00:00Z';
+    update.modules[0].name = 'Renamed furniture';
+    update.modules[0].pieces[0].name = 'Renamed piece';
+    update.modules[0].pieces[0].cut_mm = [800, 600, 18];
+    expect((await post(update)).status).toBe(201);
+    expect(await (await get()).json()).toMatchObject({
+      module: { module_id: 'module-a1', name: 'Renamed furniture', pieces: [
+        { qr_token: token, logical_key: 'lateral-esquerda', name: 'Renamed piece', cut_mm: [800, 600, 18] },
+        { logical_key: 'base' },
+      ] }, synced_at: '2026-10-17T18:00:00Z',
+    });
+  });
+
+  it('rolls back publication if a token is reserved for a different module during R2 upload', async () => {
+    expect((await post()).status).toBe(201);
+    const update = revision(); update.revision_id = 'module-reservation-race';
+    update.modules[0].pieces[0].qr_token = 'd'.repeat(32);
+    const custom = duringPut(async () => {
+      await env.DB.prepare('INSERT INTO piece_tokens (token, project_id, module_id, logical_key) VALUES (?, ?, ?, ?)')
+        .bind('d'.repeat(32), fixture.project_id, 'unrelated-replacement-module', 'lateral-esquerda').run();
+    });
+    expect((await post(update, secret, custom)).status).toBe(409);
+    expect((await current())?.current_revision_id).toBe(fixture.revision_id);
+    expect(await env.DB.prepare("SELECT id FROM revisions WHERE id = 'module-reservation-race'").first()).toBeNull();
+    expect(await (await get()).json()).toMatchObject({ module: { module_id: 'module-a1' } });
+  });
+
+  it('does not resolve a QR from a different module even if current R2 content has been changed out of band', async () => {
+    expect((await post()).status).toBe(201);
+    const altered = revision(); altered.modules[0].module_id = 'unrelated-replacement-module';
+    await env.REVISIONS.put(`revisions/project-7c8a/${encodeURIComponent(fixture.revision_id)}.json`, JSON.stringify(altered));
+    expect((await get()).status).toBe(404);
+  });
+
   it.each([false, true])('never reassigns an existing token to another project (other installation: %s)', async (otherInstallation) => {
     await post();
     const changed = revision(); changed.project_id = 'other-project';
@@ -286,8 +337,8 @@ describe('revision HTTP API', () => {
     const custom = duringPut(async () => {
       await env.DB.batch([
         env.DB.prepare("INSERT INTO projects (id, installation_id) VALUES ('racer', 'b')"),
-        env.DB.prepare('INSERT INTO piece_tokens (token, project_id, logical_key) VALUES (?, ?, ?)')
-          .bind('e'.repeat(32), 'racer', 'other'),
+        env.DB.prepare('INSERT INTO piece_tokens (token, project_id, module_id, logical_key) VALUES (?, ?, ?, ?)')
+          .bind('e'.repeat(32), 'racer', 'other-module', 'other'),
       ]);
     });
     expect((await post(changed, secret, custom)).status).toBe(409);

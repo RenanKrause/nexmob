@@ -29,6 +29,8 @@ CREATE TABLE piece_tokens (
   token TEXT PRIMARY KEY COLLATE NOCASE NOT NULL
     CHECK (length(token) = 32 AND token NOT GLOB '*[^0-9a-fA-F]*'),
   project_id TEXT NOT NULL REFERENCES projects(id),
+  -- Permanent QR identity includes the furniture module, not only the key.
+  module_id TEXT NOT NULL CHECK (length(module_id) > 0),
   logical_key TEXT NOT NULL
 );
 CREATE INDEX piece_tokens_project_id ON piece_tokens(project_id);
