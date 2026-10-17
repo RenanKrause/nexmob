@@ -34,4 +34,5 @@ export interface Installation {
 export interface Env {
   DB: D1Database;
   REVISIONS: R2Bucket;
+  PAGES_ORIGIN: string;
 }

@@ -1,8 +1,12 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "nexmob-qr-api",
-  // Task 3 adds the HTTP entry point (src/index.ts).
+  "main": "src/index.ts",
   "compatibility_date": "2026-10-17",
+  "vars": {
+    // Replace with the exact public Pages origin before deployment.
+    "PAGES_ORIGIN": "https://nexmob-qr.pages.dev"
+  },
   "d1_databases": [
     {
       "binding": "DB",

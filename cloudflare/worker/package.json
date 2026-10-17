@@ -4,6 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "generate:validator": "node scripts/generate-revision-validator.mjs",
+    "check:validator": "node scripts/generate-revision-validator.mjs --check",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "dev": "wrangler dev",
@@ -13,6 +15,7 @@
   "devDependencies": {
     "@cloudflare/vitest-plugin": "1.4.4",
     "@cloudflare/workers-types": "5.20261016.1",
+    "ajv": "^8.20.0",
     "typescript": "~5.9.3",
     "vitest": "^4.1.0",
     "wrangler": "4.151.1"
