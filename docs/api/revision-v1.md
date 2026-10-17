@@ -6,7 +6,7 @@ O contrato em [`contracts/revision-v1.schema.json`](../../contracts/revision-v1.
 
 Uma revisão contém `schema_version` (`"1"`), `project_id`, `revision_id`, `synced_at` em RFC 3339 e `modules`. Cada módulo identifica seu móvel, nome, ambiente e peças. Cada peça contém uma `logical_key` estável, token QR aleatório, nome, dimensões de corte, transformação, material efetivo, lados com fita e visibilidade.
 
-`cut_mm` é uma tupla de três medidas positivas em milímetros. `transform_mm` é `[x, y, z, rotation_z_deg]`: posição em milímetros e rotação em graus ao redor de Z. `edge_banding` sempre possui os booleanos `top`, `right`, `bottom` e `left`. `qr_token` contém exatamente 64 caracteres hexadecimais (32 bytes); ele não codifica dados do projeto. O fixture válido em [`contracts/fixtures/revision-v1.json`](../../contracts/fixtures/revision-v1.json) é um exemplo mínimo.
+`cut_mm` é uma tupla de três medidas positivas em milímetros. `transform_mm` é `[x, y, z, rotation_z_deg]`: posição em milímetros e rotação em graus ao redor de Z. `edge_banding` sempre possui os booleanos `top`, `right`, `bottom` e `left`. `qr_token` contém exatamente 32 caracteres hexadecimais (16 bytes, 128 bits); ele não codifica dados do projeto. O fixture válido em [`contracts/fixtures/revision-v1.json`](../../contracts/fixtures/revision-v1.json) é um exemplo mínimo.
 
 ## HTTP
 

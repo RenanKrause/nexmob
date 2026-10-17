@@ -11,7 +11,7 @@
       "pieces": [
         {
           "logical_key": "lateral-esquerda",
-          "qr_token": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "qr_token": "0123456789abcdef0123456789abcdef",
           "name": "Lateral esquerda",
           "cut_mm": [720, 560, 18],
           "transform_mm": [0, 0, 0, 0],
@@ -26,7 +26,7 @@
         },
         {
           "logical_key": "base",
-          "qr_token": "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+          "qr_token": "abcdef0123456789abcdef0123456789",
           "name": "Base",
           "cut_mm": [764, 560, 18],
           "transform_mm": [0, 0, 0, 0],
