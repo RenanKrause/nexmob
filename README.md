@@ -60,6 +60,10 @@ Módulos da versão 0.1 preservam a prateleira original ao serem editados; seu t
 
 Os dados de fabricação das chapas ficam em `marcenaria_parametrica_peca`, com medidas em milímetros. Os parâmetros, a árvore de divisões, as caixas de gaveta e as composições de frentes ficam em `marcenaria_parametrica_modulo`. Furação, ferragens e exportação CNC ainda não foram implementadas.
 
+## Contrato da API Cloudflare
+
+A sincronização do visualizador usa o contrato versionado `RevisionV1`, descrito em [`docs/api/revision-v1.md`](docs/api/revision-v1.md) e validado por `contracts/revision-v1.schema.json`. O POST autenticado é `/v1/revisions`; cada QR abre `/p/{qr_token}` e consulta a revisão pública atual. Fixtures válidos e inválidos ficam em `contracts/fixtures/`.
+
 ## Organização do código
 
 ```text

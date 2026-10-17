@@ -1,0 +1,44 @@
+{
+  "project_id": "project-7c8a",
+  "revision_id": "revision-2026-10-17T16:00:00Z",
+  "synced_at": "2026-10-17T16:00:00Z",
+  "modules": [
+    {
+      "module_id": "module-a1",
+      "name": "Balcão inferior",
+      "environment": "Cozinha",
+      "pieces": [
+        {
+          "logical_key": "lateral-esquerda",
+          "qr_token": "not-a-64-character-hex-token",
+          "name": "Lateral esquerda",
+          "cut_mm": [720, 560, 18],
+          "transform_mm": [0, 0, 0, 0],
+          "material": "MDF branco",
+          "edge_banding": {
+            "top": false,
+            "right": true,
+            "bottom": false,
+            "left": true
+          },
+          "visible": true
+        },
+        {
+          "logical_key": "base",
+          "qr_token": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+          "name": "Base",
+          "cut_mm": [764, 560],
+          "transform_mm": [0, 0, 0, 0],
+          "material": "MDF branco",
+          "edge_banding": {
+            "top": false,
+            "right": false,
+            "bottom": true,
+            "left": false
+          },
+          "visible": true
+        }
+      ]
+    }
+  ]
+}
