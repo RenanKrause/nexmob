@@ -115,7 +115,7 @@ git commit -m "feat: store project client and named environments"
 
 - [ ] **Step 1: Escrever testes de chaves e preservação**
 
-Testar que a chave usa código e origem de vão/gaveta/frente quando disponíveis; que `qr_token` hexadecimal de 64 caracteres é criado somente na primeira geração; que uma substituição “MDF Freijó Puro” na lateral não passa para outra lateral e sobrevive a `atualizar`.
+Testar que a chave usa código e origem de vão/gaveta/frente quando disponíveis; que `qr_token` hexadecimal de 32 caracteres (128 bits) é criado somente na primeira geração; que uma substituição “MDF Freijó Puro” na lateral não passa para outra lateral e sobrevive a `atualizar`.
 
 - [ ] **Step 2: Executar testes para confirmar falha**
 
