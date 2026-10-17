@@ -1,0 +1,56 @@
+[hidden] { display: none !important; }
+.cabecalho-editor { display: flex; align-items: center; justify-content: space-between; padding: 17px 20px; background: #fff; border-bottom: 1px solid var(--linha); }
+.cabecalho-editor .marca { color: var(--grafite); font-size: 16px; }
+.identificador-editor { color: var(--secundario); font-size: 10px; letter-spacing: .12em; }
+.resumo-modulo { margin: 16px 18px 12px; padding: 14px; background: #fff; border: 1px solid var(--linha); border-radius: 6px; }
+.resumo-modulo h1 { font-size: 15px; margin: 0 0 4px; letter-spacing: 0; }
+.resumo-modulo p { font-size: 11px; color: var(--secundario); margin: 0 0 10px; }
+.contagem-pecas { display: flex; gap: 5px; flex-wrap: wrap; }
+.contagem-pecas span { border: 1px solid var(--linha); border-radius: 12px; padding: 3px 7px; font-size: 10px; color: var(--secundario); }
+.abas-editor { display: flex; padding: 0 18px; border-bottom: 1px solid var(--linha); }
+.abas-editor button { background: transparent; border: 0; border-bottom: 2px solid transparent; padding: 12px 11px; font-weight: 600; color: var(--secundario); }
+.abas-editor button:hover { background: var(--suave); }
+.abas-editor button[aria-selected="true"] { color: var(--petroleo-escuro); border-bottom-color: var(--petroleo); }
+.conteudo-edicao { padding: 18px; background: #fff; }
+.conteudo-edicao h2 { font-size: 13px; margin: 0 0 8px; }
+.titulo-vao { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.sinal-selecao { color: var(--petroleo); font-size: 10px; }
+.sinal-selecao::before { content: ''; display: inline-block; width: 5px; height: 5px; margin-right: 4px; border-radius: 50%; background: var(--petroleo); }
+.instrucao-editor, .nota-selecao { color: var(--secundario); font-size: 11px; line-height: 1.5; }
+.estado-sem-selecao { display: grid; justify-items: center; gap: 6px; border: 1px dashed #c7d4d3; border-radius: 5px; padding: 18px 10px; margin: 18px 0; background: #fafcfc; }
+.estado-sem-selecao > span { font-size: 22px; color: var(--petroleo); }
+.estado-sem-selecao p { font-size: 11px; margin: 0; color: var(--secundario); }
+.detalhes-vao { margin: 14px 0; border-color: #cbdedc; background: #f8fbfa; }
+.resumo-vao { font-size: 12px; }
+.resumo-vao span { font-size: 11px; white-space: nowrap; }
+.nota-selecao { padding: 0 14px 12px; margin: 0; }
+.controle-quantidade { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; }
+.controle-quantidade label { margin: 0; font-weight: 500; color: var(--secundario); }
+.controle-quantidade input { width: 59px; height: 34px; padding: 0 8px; border: 1px solid #cbd4d5; border-radius: 4px; background: white; color: var(--grafite); font-weight: 650; }
+.controle-quantidade span { color: var(--secundario); font-size: 11px; }
+.ajuste-gaveta { margin: 0; align-self: center; color: var(--secundario); font-size: 10px; line-height: 1.35; }
+.acoes-peca { display: flex; gap: 7px; padding: 0 14px 14px; }
+.acoes-peca button { padding: 9px 7px; flex: 1; border: 1px solid var(--linha); border-radius: 4px; background: white; color: var(--petroleo-escuro); font-weight: 600; font-size: 11px; }
+.acoes-peca button:hover { background: var(--suave); border-color: var(--petroleo); }
+.acoes-peca .acao-excluir { color: var(--erro); }
+.formulario-gaveta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 14px; }
+.formulario-gaveta label { display: grid; gap: 5px; color: var(--grafite); font-size: 11px; font-weight: 700; }
+.formulario-gaveta label small { color: var(--secundario); font-size: 10px; font-weight: 400; line-height: 1.35; }
+.formulario-gaveta label:last-of-type { grid-column: 1 / -1; }
+.formulario-gaveta button { grid-column: 1 / -1; min-height: 34px; border: 1px solid var(--petroleo); border-radius: 4px; background: var(--petroleo); color: #fff; font-size: 11px; font-weight: 700; }
+.formulario-gaveta button:hover { background: var(--petroleo-escuro); }
+.aviso-construcao { margin-top: 18px; padding: 13px; border: 1px solid var(--linha); border-radius: 5px; font-size: 11px; }
+.aviso-construcao p { color: var(--secundario); line-height: 1.45; margin: 5px 0 10px; }
+.aviso-construcao button { border: 0; padding: 0; background: none; color: var(--petroleo-escuro); font-weight: 650; }
+.aviso-construcao button + button { margin-left: 14px; }
+.aviso-construcao button:hover { text-decoration: underline; }
+.conteudo-edicao .secao-formulario { border: 0; margin: 0; padding-bottom: 18px; }
+.rodape-editor { border-top: 1px solid var(--linha); padding: 0 18px 12px; background: white; }
+.rodape-editor .mensagem-edicao { min-height: 0; margin: 10px 0; line-height: 1.4; }
+.ajuda-edicao { margin: 9px 0 0; color: var(--secundario); font-size: 10px; line-height: 1.4; }
+.legenda-editor { list-style: none; padding: 12px 0; }
+.legenda-editor li { display: flex; gap: 9px; align-items: center; margin: 13px 0; font-size: 12px; }
+.legenda-editor i { width: 12px; height: 12px; display: inline-block; border: 1px solid #276f73; background: #e8f2f1; }
+.legenda-editor .amostra-selecao { border-color: #b8433f; background: #f1dedc; }
+.legenda-editor .amostra-previa { background: #c5deda; }
+button:disabled { opacity: .45; cursor: not-allowed; }

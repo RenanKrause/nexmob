@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nex Mob · Modo construtivo</title>
+  <link rel="stylesheet" href="estilos.css"><link rel="stylesheet" href="modo_construtivo.css">
+  <script src="campos_construtivos.js" defer></script><script src="previa_construtiva.js" defer></script><script src="modo_construtivo.js" defer></script>
+</head>
+<body>
+  <div class="aplicativo aplicativo-modo">
+    <div class="area-modo">
+      <aside class="lateral-modo">
+        <header class="marca-modo"><span class="marca-simbolo" aria-hidden="true"></span><div><strong>Nex Mob</strong><span>Modo construtivo</span></div></header>
+        <nav class="navegacao-familias" aria-label="Categorias de móveis">
+          <h2>Categoria</h2>
+          <button class="botao-familia ativa" type="button" data-familia="inferiores" aria-pressed="true">Inferiores</button>
+          <button class="botao-familia" type="button" data-familia="superiores" aria-pressed="false">Superiores</button>
+          <button class="botao-familia" type="button" data-familia="armarios" aria-pressed="false">Armários</button>
+        </nav>
+        <section class="biblioteca-modos" aria-labelledby="titulo-modos">
+          <h2 id="titulo-modos">Modos construtivos</h2>
+          <div id="lista-modos" class="lista-modos"></div>
+          <button id="novo-modo" class="botao-novo-modo" type="button">+ Novo modo</button>
+        </section>
+      </aside>
+      <main class="principal-modo">
+        <header class="cabecalho-principal-modo">
+          <div class="titulo-modo"><label for="nome-modo">Nome do modo</label><input id="nome-modo" maxlength="60" required placeholder="Ex.: Cozinha 18 mm"><p id="subtitulo-familia"></p></div>
+          <div class="acoes-cabecalho"><button id="ativar-modo" class="botao-ativar" type="button">Ativar selecionado</button><button id="aplicar-projeto" class="botao-secundario botao-aplicar" type="button">Salvar e aplicar</button><button class="botao-principal botao-salvar" type="submit" form="formulario-modo">Salvar e ativar</button></div>
+        </header>
+        <form id="formulario-modo" class="formulario-modo">
+          <nav id="abas-secoes" class="abas-secoes" aria-label="Configurações construtivas" role="tablist"></nav>
+          <section class="conteudo-secao" role="tabpanel" aria-labelledby="aba-secao-estrutura">
+            <div class="cabecalho-secao"><h1 id="titulo-secao"></h1><p id="descricao-secao"></p></div>
+            <div class="corpo-secao">
+              <div id="campos-construtivos" class="lista-regras"></div>
+              <aside class="previa-construtiva" aria-label="Prévia técnica da montagem">
+                <div class="cabecalho-previa"><span>Prévia técnica</span><small>O destaque acompanha a regra em edição</small></div>
+                <p id="descricao-previa" class="rotulo-oculto" aria-live="polite"></p>
+                <svg id="desenho-previa" viewBox="0 0 360 260" role="img" aria-describedby="descricao-previa"></svg>
+              </aside>
+            </div>
+          </section>
+        </form>
+      </main>
+    </div>
+    <footer class="rodape-modo"><p id="modo-ativo"></p><p id="mensagem-modo" class="mensagem-edicao" role="status" aria-live="polite"></p></footer>
+  </div>
+</body>
+</html>

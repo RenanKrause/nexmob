@@ -1,0 +1,22 @@
+.aplicativo-frentes { min-height: 100vh; background: #fff; }
+.cabecalho-frentes { display: flex; align-items: center; justify-content: space-between; padding: 17px 20px; border-bottom: 1px solid var(--linha); }
+.cabecalho-frentes .marca { color: var(--grafite); font-size: 16px; }
+.cabecalho-frentes > span { color: var(--secundario); font-size: 10px; letter-spacing: .1em; }
+.conteudo-frentes { padding: 20px; }
+.introducao-frentes h1 { margin: 0 0 5px; color: var(--grafite); font-size: 19px; }
+.introducao-frentes p { margin: 0 0 20px; color: var(--secundario); font-size: 12px; line-height: 1.45; }
+.campo-largo { display: grid; gap: 6px; color: var(--grafite); font-size: 12px; font-weight: 700; }
+.campo-largo select { width: 100%; height: 40px; padding: 0 10px; border: 1px solid var(--linha); border-radius: 6px; background: #fff; color: var(--grafite); }
+.resumo-frentes { min-height: 19px; margin: 8px 0 15px; color: var(--secundario); font-size: 11px; }
+.tipos-frentes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+.tipos-frentes button { display: grid; gap: 4px; min-height: 82px; padding: 13px; border: 1px solid var(--linha); border-radius: 7px; background: #fff; color: var(--grafite); text-align: left; }
+.tipos-frentes button:hover { border-color: #9ebfc1; background: var(--suave); }
+.tipos-frentes button.ativo { border-color: #6da7aa; background: #eef7f6; color: var(--petroleo-escuro); }
+.tipos-frentes small { color: var(--secundario); font-size: 10px; font-weight: 400; line-height: 1.35; }
+.regras-frentes { display: grid; gap: 0; margin-top: 18px; border-top: 1px solid var(--linha); }
+.regras-frentes label { display: grid; grid-template-columns: minmax(0, 1fr) 145px; gap: 14px; align-items: center; min-height: 64px; border-bottom: 1px solid var(--linha); color: var(--grafite); font-size: 12px; font-weight: 650; }
+.regras-frentes .campo-medida { height: 36px; }
+.nota-frentes { margin: 16px 0 0; color: var(--secundario); font-size: 11px; line-height: 1.45; }
+.rodape-frentes { display: flex; gap: 12px; align-items: center; padding: 13px 20px; border-top: 1px solid var(--linha); background: #fff; }
+.rodape-frentes .mensagem-edicao { flex: 1; min-height: 0; margin: 0; }
+.rodape-frentes button { width: auto; min-height: 38px; padding: 0 16px; white-space: nowrap; }

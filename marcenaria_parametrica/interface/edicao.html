@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nex Mob · Editor 3D</title>
+  <link rel="stylesheet" href="estilos.css"><link rel="stylesheet" href="edicao.css">
+  <script src="abas_edicao.js" defer></script>
+  <script src="selecao_pecas.js" defer></script>
+  <script src="edicao.js" defer></script>
+</head>
+<body>
+  <div class="aplicativo">
+    <header class="cabecalho-editor">
+      <div class="marca"><span class="marca-simbolo" aria-hidden="true"></span><strong>Nex Mob</strong></div>
+      <span class="identificador-editor">EDITOR 3D</span>
+    </header>
+    <section class="resumo-modulo" aria-label="Móvel em edição">
+      <h1>Balcão inferior</h1><p id="dimensoes-resumo">Módulo paramétrico</p>
+      <div id="contagem-pecas" class="contagem-pecas"></div>
+    </section>
+    <nav class="abas-editor" aria-label="Propriedades do móvel" role="tablist">
+      <button id="aba-construir" type="button" role="tab" aria-controls="painel-construir" aria-selected="true" data-aba="construir">Construir</button>
+      <button id="aba-medidas" type="button" role="tab" aria-controls="painel-medidas" aria-selected="false" tabindex="-1" data-aba="medidas">Medidas</button>
+      <button id="aba-visualizacao" type="button" role="tab" aria-controls="painel-visualizacao" aria-selected="false" tabindex="-1" data-aba="visualizacao">Visualização</button>
+    </nav>
+    <main class="conteudo-edicao">
+      <section id="painel-construir" role="tabpanel" aria-labelledby="aba-construir">
+        <div class="titulo-vao"><h2>Editar no móvel</h2><span class="sinal-selecao">Seleção contínua</span></div>
+        <p class="instrucao-editor">Clique em um vão ou na borda frontal de uma prateleira ou divisória. As ações aparecem junto da seleção.</p>
+        <div id="estado-sem-selecao" class="estado-sem-selecao"><span aria-hidden="true">↖</span><strong>Selecione no 3D</strong><p>O contorno mostra o que será editado.</p></div>
+        <div id="detalhes-vao" class="detalhes-vao" hidden>
+          <div class="resumo-vao"><strong>Vão selecionado</strong><span id="medidas-vao"></span></div>
+          <div class="linha-elemento">
+            <label for="posicao-prateleira">Prateleiras <small>Primeiro vão livre, da base interna até a primeira peça</small></label>
+            <div class="controle-quantidade"><label for="quantidade-prateleira">Quantidade</label><input id="quantidade-prateleira" type="number" min="1" max="10" step="1" value="1"><span>peça(s)</span></div>
+            <div class="acao-elemento"><span class="campo-medida"><input id="posicao-prateleira" type="number" step="any" min="80" required><span>mm</span></span><button type="button" data-elemento="prateleira">Adicionar</button></div>
+          </div>
+          <div class="linha-elemento">
+            <label for="posicao-divisoria">Divisórias verticais <small>Primeiro vão livre, da lateral interna até a primeira peça</small></label>
+            <div class="controle-quantidade"><label for="quantidade-divisoria">Quantidade</label><input id="quantidade-divisoria" type="number" min="1" max="10" step="1" value="1"><span>peça(s)</span></div>
+            <div class="acao-elemento"><span class="campo-medida"><input id="posicao-divisoria" type="number" step="any" min="80" required><span>mm</span></span><button type="button" data-elemento="divisoria">Adicionar</button></div>
+          </div>
+          <div class="linha-elemento">
+            <label for="quantidade-gaveta">Gavetas <small>Caixas internas com laterais, contra frente, posterior e fundo</small></label>
+            <div class="controle-quantidade"><label for="quantidade-gaveta">Quantidade</label><input id="quantidade-gaveta" type="number" min="1" max="10" step="1" value="1"><span>gaveta(s)</span></div>
+            <div class="acao-elemento"><p class="ajuste-gaveta">A altura é distribuída igualmente dentro do vão.</p><button type="button" data-elemento="gaveta">Adicionar</button></div>
+          </div>
+          <p class="nota-selecao">A medida digitada define o primeiro vão. Com várias peças, os vãos restantes ficam iguais.</p>
+        </div>
+        <section id="detalhes-peca" class="detalhes-vao" hidden>
+          <div class="resumo-vao"><strong id="nome-peca">Peça selecionada</strong><span>PEÇA</span></div>
+          <form id="formulario-posicao" class="linha-elemento">
+            <label for="posicao-peca"><span id="rotulo-medida-peca">Medida livre do vão</span><small id="referencia-posicao"></small></label>
+            <div class="acao-elemento"><span class="campo-medida"><input id="posicao-peca" type="number" step="any" required><span>mm</span></span><button type="submit">Posicionar</button></div>
+          </form>
+          <div class="acoes-peca">
+            <button type="button" data-acao-peca="iniciar_movimento">↕ Mover no 3D</button>
+            <button type="button" data-acao-peca="duplicar">Duplicar</button>
+            <button type="button" data-acao-peca="excluir" class="acao-excluir">Excluir</button>
+          </div>
+          <p id="dependencias-peca" class="nota-selecao"></p>
+        </section>
+        <section id="detalhes-gaveta" class="detalhes-vao" hidden>
+          <div class="resumo-vao"><strong id="nome-gaveta">Gaveta selecionada</strong><span>GAVETA</span></div>
+          <form id="formulario-gaveta" class="formulario-gaveta">
+            <label for="posicao-gaveta">Posição na altura do vão <small>Da face interna inferior do vão até a base da gaveta</small><span class="campo-medida"><input id="posicao-gaveta" type="number" step="any" required><span>mm</span></span></label>
+            <label for="altura-gaveta">Altura da caixa <small>As cinco peças acompanham esta medida</small><span class="campo-medida"><input id="altura-gaveta" type="number" step="any" required><span>mm</span></span></label>
+            <label for="profundidade-gaveta">Profundidade da caixa <small>Medida da frente ao posterior</small><span class="campo-medida"><input id="profundidade-gaveta" type="number" step="any" required><span>mm</span></span></label>
+            <button type="submit">Aplicar ajustes</button>
+          </form>
+          <div class="acoes-peca acoes-gaveta">
+            <button type="button" data-acao-gaveta="mover">↕ Mover no 3D</button>
+            <button type="button" data-acao-gaveta="duplicar">Duplicar</button>
+            <button type="button" data-acao-gaveta="excluir" class="acao-excluir">Excluir</button>
+          </div>
+          <p class="nota-selecao">A caixa mantém as folgas do modo construtivo e não pode cruzar outra gaveta.</p>
+        </section>
+        <div class="aviso-construcao"><strong>Construção pelo modo salvo</strong><p>Espessuras, fundo e sarrafos são definidos no modo construtivo.</p><button id="botao-modo-construtivo" type="button">Abrir modo construtivo ↗</button><button id="botao-frentes" type="button">Portas e frentes ↗</button></div>
+      </section>
+      <section id="painel-medidas" role="tabpanel" aria-labelledby="aba-medidas" hidden>
+        <form id="formulario-edicao">
+          <section class="secao-formulario"><h2>Dimensões do módulo</h2><p class="instrucao-editor">As divisões internas acompanham as novas medidas proporcionalmente.</p>
+            <div class="grade-campos">
+              <label>Largura <span class="campo-medida"><input name="largura_mm" type="number" min="300" max="2400" step="1" required><span>mm</span></span></label>
+              <label>Altura <span class="campo-medida"><input name="altura_mm" type="number" min="300" max="1200" step="1" required><span>mm</span></span></label>
+              <label>Profundidade <span class="campo-medida"><input name="profundidade_mm" type="number" min="250" max="800" step="1" required><span>mm</span></span></label>
+            </div>
+          </section>
+          <button class="botao-principal" type="submit">Aplicar medidas</button>
+        </form>
+      </section>
+      <section id="painel-visualizacao" role="tabpanel" aria-labelledby="aba-visualizacao" hidden>
+        <h2>Visualização da edição</h2><p class="instrucao-editor">A vista frontal facilita selecionar peças finas e comparar os vãos.</p>
+        <button id="botao-vista-frontal" class="botao-secundario" type="button">Enquadrar em vista frontal</button>
+        <ul class="legenda-editor"><li><i class="amostra-vao"></i>Vãos disponíveis</li><li><i class="amostra-selecao"></i>Vão ou peça selecionada</li><li><i class="amostra-previa"></i>Prévia de movimento</li></ul>
+        <p class="instrucao-editor">Arraste o quadrado no centro da peça. Você também pode usar Mover e clicar no destino, ou digitar a posição na caixa Medidas do SketchUp.</p>
+      </section>
+    </main>
+    <footer class="rodape-editor">
+      <p id="mensagem-edicao" class="mensagem-edicao" role="status" aria-live="polite"></p>
+      <button id="botao-concluir" class="botao-principal" type="button">Concluir edição</button>
+      <p class="ajuda-edicao">Esc cancela o movimento. Ctrl+Z desfaz a última alteração.</p>
+    </footer>
+  </div>
+</body>
+</html>
+

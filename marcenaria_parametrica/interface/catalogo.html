@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nex Mob · Catálogo</title>
+  <link rel="stylesheet" href="estilos.css">
+  <script src="catalogo.js" defer></script>
+</head>
+<body>
+  <div class="aplicativo">
+    <header class="cabecalho">
+      <div class="marca"><span class="marca-simbolo" aria-hidden="true"></span><span>Nex Mob</span></div>
+      <div class="cabecalho-texto">
+        <h1>Inserir módulo</h1>
+        <p>Escolha uma estrutura e posicione no modelo.</p>
+      </div>
+    </header>
+
+    <nav class="categorias" aria-label="Categorias de módulos">
+      <button class="categoria ativa" type="button" data-categoria="inferiores" aria-pressed="true">Inferiores</button>
+      <button class="categoria" type="button" data-categoria="superiores" aria-pressed="false">Superiores</button>
+      <button class="categoria" type="button" data-categoria="armarios" aria-pressed="false">Armários</button>
+    </nav>
+
+    <main class="conteudo-catalogo">
+      <div class="secao-titulo"><h2 id="titulo-categoria">Balcões inferiores</h2><span id="contagem-categoria">1 disponível</span></div>
+
+      <div class="lista-modulos" data-lista="inferiores">
+        <button class="modulo disponivel" type="button" data-tipo="balcao_inferior">
+          <span class="desenho-modulo" aria-hidden="true"><svg viewBox="0 0 64 64"><path d="M10 13h44v39H10zM17 13v39M47 13v39M17 22h30M17 45h30"/></svg></span>
+          <span class="modulo-texto"><strong>Balcão inferior</strong><small>800 × 720 × 560 mm, com sarrafos superiores</small></span>
+          <span class="seta" aria-hidden="true">›</span>
+        </button>
+        <div class="modulo indisponivel" aria-disabled="true">
+          <span class="desenho-modulo" aria-hidden="true"><svg viewBox="0 0 64 64"><path d="M10 13h44v39H10zM17 13v39M47 13v39M17 28h30M17 40h30M22 21h20M22 34h20"/></svg></span>
+          <span class="modulo-texto"><strong>Gavetas internas</strong><small>Selecione um vão no editor para adicionar</small></span>
+        </div>
+      </div>
+
+      <div class="lista-modulos oculto" data-lista="superiores">
+        <div class="modulo indisponivel" aria-disabled="true">
+          <span class="desenho-modulo" aria-hidden="true"><svg viewBox="0 0 64 64"><path d="M9 12h46v35H9zM17 12v35M47 12v35M17 28h30"/></svg></span>
+          <span class="modulo-texto"><strong>Módulo aéreo</strong><small>Em preparação</small></span>
+        </div>
+      </div>
+
+      <div class="lista-modulos oculto" data-lista="armarios">
+        <div class="modulo indisponivel" aria-disabled="true">
+          <span class="desenho-modulo" aria-hidden="true"><svg viewBox="0 0 64 64"><path d="M13 7h38v50H13zM32 7v50M27 30v6M37 30v6"/></svg></span>
+          <span class="modulo-texto"><strong>Guarda-roupa</strong><small>Em preparação</small></span>
+        </div>
+      </div>
+      <button id="botao-modo-construtivo" class="botao-secundario" type="button" style="margin-top: 24px">Modo construtivo</button>
+    </main>
+
+    <footer class="rodape"><span class="indicador" aria-hidden="true"></span><span id="mensagem-catalogo">Selecione um módulo para inserir</span><span class="rodape-versao">v0.4.7</span></footer>
+  </div>
+</body>
+</html>
+

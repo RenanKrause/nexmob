@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Nex Mob · Frentes</title>
+  <link rel="stylesheet" href="estilos.css"><link rel="stylesheet" href="frentes.css">
+  <script src="frentes.js" defer></script>
+</head>
+<body>
+  <div class="aplicativo aplicativo-frentes">
+    <header class="cabecalho-frentes"><div class="marca"><span class="marca-simbolo" aria-hidden="true"></span><strong>Nex Mob</strong></div><span>PORTAS E FRENTES</span></header>
+    <main class="conteudo-frentes">
+      <section class="introducao-frentes"><h1>Composição frontal</h1><p>Defina portas ou frentes de gaveta para o vão selecionado.</p></section>
+      <label class="campo-largo" for="seletor-vao">Vão do módulo<select id="seletor-vao"></select></label>
+      <p id="resumo-frentes" class="resumo-frentes"></p>
+      <section class="tipos-frentes" aria-label="Tipo de composição">
+        <button type="button" data-tipo="portas"><strong>Portas</strong><small>Quantidade sugerida pela largura do vão.</small></button>
+        <button type="button" data-tipo="gavetas"><strong>Frentes de gaveta</strong><small>Detecta e vincula uma frente a cada caixa.</small></button>
+      </section>
+      <section class="regras-frentes">
+        <label for="quantidade-portas">Quantidade de portas sugerida <span class="campo-medida"><input id="quantidade-portas" type="number" min="1" max="4" step="1" value="1"><span>un.</span></span></label>
+        <label for="espessura-frente">Espessura das frentes <span class="campo-medida"><input id="espessura-frente" type="number" min="12" max="30" step="0.1" value="18" required><span>mm</span></span></label>
+        <label for="folga-frente">Folga entre frentes <span class="campo-medida"><input id="folga-frente" type="number" min="0" max="10" step="0.1" value="2" required><span>mm</span></span></label>
+        <label for="recuo-frente">Recuo da frente <span class="campo-medida"><input id="recuo-frente" type="number" min="0" max="30" step="0.1" value="0" required><span>mm</span></span></label>
+      </section>
+      <p class="nota-frentes">Os ajustes iniciais vêm do Modo construtivo. Aplicar substitui somente a composição do vão escolhido; a caixa interna continua configurada no Editor 3D.</p>
+    </main>
+    <footer class="rodape-frentes"><p id="mensagem-frentes" class="mensagem-edicao" role="status" aria-live="polite"></p><button id="botao-aplicar" class="botao-principal" type="button">Aplicar composição</button></footer>
+  </div>
+</body>
+</html>

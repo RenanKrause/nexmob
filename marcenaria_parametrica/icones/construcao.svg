@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
+  <title>Modo construtivo Nex Mob</title>
+  <rect x="3" y="3" width="26" height="26" rx="3" fill="#f6f7f5" stroke="#34454b" stroke-width="1.7"/>
+  <path d="M8 9h16M8 16h16M8 23h16" stroke="#34454b" stroke-width="2" stroke-linecap="round"/>
+  <path d="M12 6v6m8 1v6m-8 1v6" stroke="#276f73" stroke-width="4" stroke-linecap="round"/>
+</svg>
