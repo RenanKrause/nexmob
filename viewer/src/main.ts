@@ -39,6 +39,17 @@ const viewer = document.querySelector<HTMLDivElement>('#viewer')!;
 const sceneHost = document.querySelector<HTMLDivElement>('#scene')!;
 const buttons = ['reset-view', 'rotate-view', 'zoom-in', 'zoom-out'].map(id => document.getElementById(id) as HTMLButtonElement);
 let disposeScene: (() => void) | undefined;
+let currentPayload: PublicPieceResponse | undefined;
+let pageHidden = false;
+let sceneGeneration = 0;
+let sceneModule: Promise<typeof import('./view')> | undefined;
+
+function clearScene(): void {
+  sceneGeneration++;
+  const dispose = disposeScene;
+  disposeScene = undefined;
+  dispose?.();
+}
 
 function showStatus(title: string, detail: string, retry = false): void {
   viewer.hidden = true;
@@ -69,22 +80,37 @@ async function showPiece(payload: PublicPieceResponse): Promise<void> {
   syncedAt.textContent = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(payload.synced_at));
   syncedAt.title = `Horário local deste dispositivo. Registro: ${payload.synced_at}`;
   status.hidden = true; viewer.hidden = false;
+  currentPayload = payload;
+  await restoreScene();
+}
+
+async function restoreScene(): Promise<void> {
+  if (!currentPayload || pageHidden || disposeScene) return;
+  const payload = currentPayload;
+  const generation = ++sceneGeneration;
+  sceneHost.setAttribute('aria-busy', 'true');
   buttons.forEach(button => { button.disabled = true; });
   try {
-    const { mountScene } = await import('./view');
+    const { mountScene } = await (sceneModule ??= import('./view').catch(error => {
+      sceneModule = undefined;
+      throw error;
+    }));
+    // A pagehide or newer restore may have invalidated this pending import.
+    if (pageHidden || generation !== sceneGeneration) return;
     disposeScene = mountScene(payload, sceneHost, buttons);
   } catch {
+    if (pageHidden || generation !== sceneGeneration) return;
     sceneHost.replaceChildren();
     const message = document.createElement('p'); message.className = 'scene-message'; message.setAttribute('role', 'status');
     message.textContent = 'Não foi possível abrir o desenho 3D. Tente outro navegador com WebGL. Os dados da peça estão disponíveis abaixo.';
     sceneHost.append(message);
   } finally {
-    sceneHost.setAttribute('aria-busy', 'false');
+    if (generation === sceneGeneration) sceneHost.setAttribute('aria-busy', 'false');
   }
 }
 
 async function load(): Promise<void> {
-  disposeScene?.(); disposeScene = undefined;
+  clearScene(); currentPayload = undefined;
   const route = /^\/p\/([a-f0-9]{32})$/i.exec(window.location.pathname);
   if (!route) {
     showStatus('QR inválido', 'Abra o endereço completo da etiqueta ou escaneie o QR novamente.');
@@ -101,5 +127,13 @@ async function load(): Promise<void> {
   } finally { status.setAttribute('aria-busy', 'false'); }
 }
 
-window.addEventListener('pagehide', () => { disposeScene?.(); });
+window.addEventListener('pagehide', () => {
+  pageHidden = true;
+  clearScene();
+});
+window.addEventListener('pageshow', event => {
+  if (!event.persisted) return;
+  pageHidden = false;
+  void restoreScene();
+});
 void load();
