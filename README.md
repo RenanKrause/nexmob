@@ -62,7 +62,110 @@ Os dados de fabricação das chapas ficam em `marcenaria_parametrica_peca`, com 
 
 ## Contrato da API Cloudflare
 
-A sincronização do visualizador usa o contrato versionado `RevisionV1`, descrito em [`docs/api/revision-v1.md`](docs/api/revision-v1.md) e validado por `contracts/revision-v1.schema.json`. O POST autenticado é `/v1/revisions`; cada QR abre `/p/{qr_token}` com token aleatório de 128 bits e consulta a revisão pública atual. Fixtures válidos e inválidos ficam em `contracts/fixtures/`.
+A sincronização do visualizador usa o contrato versionado `RevisionV1`, descrito em [`docs/api/revision-v1.md`](docs/api/revision-v1.md) e validado por `contracts/revision-v1.schema.json`. O POST autenticado é `/v1/revisions`; cada QR abre `/p/{qr_token}` com token aleatório de **32 caracteres hexadecimais (16 bytes, 128 bits)** e consulta a revisão pública atual. Fixtures válidos e inválidos ficam em `contracts/fixtures/`.
+
+## Preparação local do visualizador e da API
+
+O código está preparado para Worker + D1 + R2 e Pages. A validação local não cria recursos nem comprova um serviço publicado. Os comandos de provisionamento e deploy abaixo são instruções para o administrador executar posteriormente, quando escolher publicar.
+
+Use Node.js 24 compatível com `viewer/package.json` (validado com 24.14.1) e npm. Instale as dependências com `npm ci` em `viewer` e em `cloudflare/worker`. Na raiz, a documentação do contrato contém os comandos para validar as fixtures. Depois execute, em cada diretório:
+
+```sh
+# Em viewer/
+npm test
+npm run build
+npm run preview -- --host 127.0.0.1
+
+# Em cloudflare/worker/
+npm run check:validator
+npm test
+npm run typecheck
+npx wrangler deploy --dry-run --outdir .wrangler/build
+npm run db:migrate:local
+```
+
+O último comando aplica migrations somente ao D1 local em `.wrangler/state`; os testes usam armazenamento isolado. O `--dry-run` apenas empacota o Worker, sem enviá-lo à Cloudflare. `npm run dev` inicia o Worker local, sem `--remote`. O preview Vite serve o build; sem API na mesma origem ou `VITE_API_ORIGIN` configurada antes do build, a consulta de uma peça não terá dados. Para QA totalmente local, use uma resposta pública derivada da fixture num servidor/proxy local de mesma origem. Um preview Vite não comprova o comportamento do CDN Pages.
+
+O arquivo existente `viewer/public/_redirects` contém `/p/* /index.html 200` e é copiado pelo Vite para `dist/_redirects`. Ele faz a abertura direta do QR carregar a página. O parser compartilhado em `viewer/src/route.ts`, usado pelo `main.ts`, aceita somente `/p/` seguido de 32 hexadecimais; tokens de 64 caracteres, segmentos extras e barra final são inválidos. A página pode carregar com HTTP 200 pelo fallback e ainda mostrar “QR inválido” ou “QR não encontrado”; o endpoint público devolve HTTP 404 nesses casos.
+
+### Configuração que cabe ao administrador
+
+Escolha a conta Cloudflare e os nomes de recursos; autentique o Wrangler apenas no ambiente administrativo. Use o dashboard ou, **posteriormente**, execute em `cloudflare/worker`:
+
+```sh
+npx wrangler d1 create nexmob-qr
+npx wrangler r2 bucket create nexmob-qr-revisions
+```
+
+O bucket R2 deve permanecer privado, sem acesso público `r2.dev` ou domínio público: o Worker lê os objetos pelo binding. Não é necessário distribuir chaves S3. Consulte a [criação de buckets R2](https://developers.cloudflare.com/r2/buckets/create-buckets/).
+
+Copie `cloudflare/worker/wrangler.jsonc` para `cloudflare/worker/wrangler.local.jsonc` (ignorado pelo Git), no mesmo diretório para preservar os caminhos relativos. O arquivo versionado contém apenas placeholders. Edite a cópia administrativa e passe `--config wrangler.local.jsonc` em todos os comandos destinados à produção:
+
+| Campo | Valor escolhido pelo administrador |
+| --- | --- |
+| `name` | Nome do Worker |
+| `d1_databases[0].binding` | `DB`, conforme `env.DB` |
+| `d1_databases[0].database_name` / `database_id` | Nome e ID retornados ao criar o D1; substituir o UUID de zeros |
+| `d1_databases[0].migrations_dir` | `migrations` |
+| `r2_buckets[0].binding` / `bucket_name` | `REVISIONS` e nome do bucket privado criado |
+| `vars.PAGES_ORIGIN` | Origem HTTPS exata do Pages escolhido, sem barra final, caminho ou wildcard |
+
+Não grave IDs reais de conta/banco, URLs privadas ou credenciais no Git. A origem de exemplo `https://pages.example.invalid` não é um serviço. O Worker só libera CORS para `PAGES_ORIGIN`; previews de branches com outro hostname precisarão de um Worker/recursos de teste separados e da origem exata correspondente. A configuração atual permite uma origem por Worker. O navegador local em HTTP não é uma origem Pages válida para esta configuração; use o proxy local para QA.
+
+### Migrations D1 e banco já existente
+
+Confira o banco e o arquivo de configuração antes de executar. Em `cloudflare/worker`, estes comandos são alternativas explícitas para banco local ou remoto:
+
+```sh
+# Local: não altera a Cloudflare
+npx wrangler d1 migrations apply DB --local
+
+# Produção: o administrador executará posteriormente, com a configuração real
+npx wrangler d1 migrations list DB --remote --config wrangler.local.jsonc
+npx wrangler d1 migrations apply DB --remote --config wrangler.local.jsonc
+```
+
+O D1 registra migrations aplicadas; `apply` executa apenas as pendentes ([migrations D1](https://developers.cloudflare.com/d1/reference/migrations/), [comandos Wrangler D1](https://developers.cloudflare.com/workers/wrangler/commands/d1/)). **Não altere `0001_initial.sql` depois que ela for aplicada remotamente**: editar esse arquivo não atualiza um banco já migrado. Mudanças posteriores exigem uma nova migration incremental, backup e plano de transformação dos dados.
+
+A correção de identidade do QR incluiu `piece_tokens.module_id` na `0001_initial.sql` antes de qualquer deploy remoto desta implementação. Se um D1 local já aplicou a versão antiga, repetir `apply` não adiciona a coluna. Para um banco local descartável, pare o Wrangler, confira o caminho absoluto e mova somente `cloudflare/worker/.wrangler/state/v3/d1` para um backup fora de `state` (preserve R2 e os demais arquivos). Rode `npm run db:migrate:local` para reconstruir o D1 e recadastre instalações/reenvie as fixtures. Alternativamente, use um diretório de persistência novo com `--persist-to` tanto na migração local quanto no `wrangler dev`. Nenhum reset local é automático.
+
+Se dados locais precisarem ser preservados, planeje um backfill confiável de `module_id` a partir das revisões antes de trocar o banco. Se a versão antiga tiver sido aplicada remotamente fora deste fluxo, não a reaplique nem invente um módulo padrão: será necessária uma nova migration e um backfill que preserve `(project_id, module_id, logical_key)` de cada reserva permanente de token.
+
+### Credencial privada por instalação
+
+O administrador gera um segredo aleatório de alta entropia por instalação (pelo menos 32 bytes, usando um gerador criptográfico ou gerenciador de segredos), codifica-o em hexadecimal ou base64url para ser aceito pelo Bearer, entrega-o de forma privada ao plugin e guarda apenas seu **SHA-256 em hexadecimal minúsculo** na tabela `installations`. Calcule o hash do texto codificado exato que será enviado, sem espaços ou quebra de linha. O segredo não vai no QR, no Pages, em `VITE_*`, no repositório ou em comandos/logs compartilhados. Este Worker não lê um `INSTALLATION_SECRET` global: `wrangler secret put` não cadastra instalações; a autenticação consulta D1.
+
+Para calcular o digest no PowerShell 7, o administrador pode fornecer o segredo por prompt, sem colocá-lo no histórico (a variável fica temporariamente em memória):
+
+```powershell
+$installationSecret = Read-Host 'Segredo da instalação' -MaskInput
+$installationHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($installationSecret))).ToLowerInvariant()
+Remove-Variable installationSecret
+$installationHash
+```
+
+Cadastre no D1 já migrado, via console administrativo ou arquivo SQL privado, substituindo os placeholders por ID único e digest de 64 hexadecimais:
+
+```sql
+INSERT INTO installations (id, token_hash, revoked_at)
+VALUES ('INSTALLATION_ID', 'SHA256_HEX_64', NULL);
+```
+
+Para arquivo SQL, um nome como `.env.installation.sql` já é ignorado; mantenha somente ID/digest nele. O administrador escolhe **um** destino: `npx wrangler d1 execute DB --local --file .env.installation.sql` para desenvolvimento, ou `npx wrangler d1 execute DB --remote --config wrangler.local.jsonc --file .env.installation.sql` para produção. O digest de 64 caracteres não é o token público de 32. Cada POST envia o segredo original em `Authorization: Bearer …` por HTTPS. Revogue uma instalação preenchendo `revoked_at`; isso bloqueia novos envios, sem expirar os QRs existentes. Não há endpoint de cadastro nem UI de configuração da credencial no plugin nesta task.
+
+### Publicação posterior de Worker e Pages
+
+Após criar os recursos, aplicar a migration e configurar a instalação, o administrador poderá publicar o Worker em `cloudflare/worker`:
+
+```sh
+npx wrangler deploy --config wrangler.local.jsonc
+```
+
+Registre a origem pública HTTPS do Worker no ambiente administrativo. `GET /health` indica que o handler está ativo, mas não testa D1/R2. Para Pages, configure o projeto conectado ao repositório com **root directory `viewer`**, build command **`npm run build`** e output directory **`dist`**, relativo a esse root. Defina Node compatível via `NODE_VERSION` e configure **`VITE_API_ORIGIN` com a origem HTTPS do Worker**, sem caminho, credenciais ou barra final. Essa variável é pública e incorporada no build; alterar seu valor exige novo build. A configuração do Pages é descrita na [documentação oficial de build](https://developers.cloudflare.com/pages/configuration/build-configuration/).
+
+No Worker, `PAGES_ORIGIN` aponta para Pages; em Pages, `VITE_API_ORIGIN` aponta para Worker. Deixar `VITE_API_ORIGIN` vazia usa a origem da página e só funciona com uma API/proxy nessa mesma origem; Pages estático sozinho não fornece `/v1/public/pieces/*`. `DB` e `REVISIONS` são bindings exclusivos do Worker; Pages não recebe banco, bucket ou segredo de instalação. Configurar Pages/branches de produção e disparar o build é uma ação posterior do administrador; nenhum push ou deploy faz parte da preparação local.
+
+Depois de publicar, valide no ambiente escolhido: enviar uma revisão fixture por POST autenticado e obter `201`; abrir diretamente `<ORIGEM_PAGES>/p/0123456789abcdef0123456789abcdef`; confirmar móvel “Balcão inferior”, peça “Lateral esquerda” e destaque amarelo, material, dimensões e sincronização; verificar que a requisição pública ao Worker recebe o CORS da origem Pages. Teste também 404 para token desconhecido/removido, rejeição de token malformado e atualização da mesma etiqueta após publicar uma nova revisão. Use ambiente/instalação de teste para não misturar a fixture com dados reais. Esse aceite remoto continua pendente até o administrador efetuar a publicação.
 
 ## Organização do código
 

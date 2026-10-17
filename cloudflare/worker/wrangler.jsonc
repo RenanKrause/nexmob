@@ -4,14 +4,15 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-10-17",
   "vars": {
-    // Replace with the exact public Pages origin before deployment.
-    "PAGES_ORIGIN": "https://nexmob-qr.pages.dev"
+    // Local/test template only. For deployment copy this file to the ignored
+    // wrangler.local.jsonc and set the exact HTTPS Pages origin, without a slash.
+    "PAGES_ORIGIN": "https://pages.example.invalid"
   },
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "nexmob-qr",
-      // Local placeholder; configure the actual database ID before deployment.
+      // Local placeholder. Put the real ID only in wrangler.local.jsonc.
       "database_id": "00000000-0000-0000-0000-000000000000",
       "migrations_dir": "migrations"
     }
@@ -22,4 +23,6 @@
       "bucket_name": "nexmob-qr-revisions"
     }
   ]
+  // Installation secrets are NOT Worker vars/secrets. D1 stores their SHA-256
+  // digests in installations; plaintext is provisioned privately to the plugin.
 }

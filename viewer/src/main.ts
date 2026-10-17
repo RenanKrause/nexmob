@@ -1,4 +1,5 @@
 import { fetchPublicPiece, PublicPieceError, type PublicPieceResponse } from './api';
+import { parsePieceRoute } from './route';
 import './style.css';
 
 const app = document.querySelector<HTMLDivElement>('#app')!;
@@ -111,14 +112,14 @@ async function restoreScene(): Promise<void> {
 
 async function load(): Promise<void> {
   clearScene(); currentPayload = undefined;
-  const route = /^\/p\/([a-f0-9]{32})$/i.exec(window.location.pathname);
-  if (!route) {
+  const token = parsePieceRoute(window.location.pathname);
+  if (!token) {
     showStatus('QR inválido', 'Abra o endereço completo da etiqueta ou escaneie o QR novamente.');
     return;
   }
   showStatus('Carregando o móvel…', 'Buscando a última sincronização desta peça.');
   status.setAttribute('aria-busy', 'true');
-  try { await showPiece(await fetchPublicPiece(route[1])); }
+  try { await showPiece(await fetchPublicPiece(token)); }
   catch (error) {
     if (error instanceof PublicPieceError) {
       const title = error.kind === 'not-found' ? 'QR não encontrado' : error.kind === 'offline' ? 'Sem conexão com o serviço' : 'Não foi possível carregar o móvel';

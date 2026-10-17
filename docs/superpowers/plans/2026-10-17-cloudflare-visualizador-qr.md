@@ -73,7 +73,7 @@ README.md                             Instruções locais, deploy e configuraç�
 
 - [ ] **Step 1: Criar o teste/fixture inválido do contrato**
 
-Adicionar ao fixture casos separados sem `schema_version`, com token fora do padrão hexadecimal de 32 bytes e com `cut_mm` de comprimento diferente de 3.
+Adicionar ao fixture casos separados sem `schema_version`, com token fora do padrão de 32 caracteres hexadecimais (16 bytes, 128 bits) e com `cut_mm` de comprimento diferente de 3.
 
 - [ ] **Step 2: Executar o validador de schema e confirmar falha**
 
@@ -83,7 +83,7 @@ Expected: FAIL apontando o primeiro campo inválido.
 
 - [ ] **Step 3: Escrever `revision-v1.schema.json` e fixture válida**
 
-Definir JSON Schema Draft 2020-12 com medidas em milímetros estritamente positivas, transformações `[x, y, z, rotation_z_deg]`, tokens hexadecimais de 32 bytes e os quatro lados `top`, `right`, `bottom`, `left` em `edge_banding`. Documentar a URL pública como `/p/{qr_token}` e o POST autenticado como `/v1/revisions`.
+Definir JSON Schema Draft 2020-12 com medidas em milímetros estritamente positivas, transformações `[x, y, z, rotation_z_deg]`, tokens de 32 caracteres hexadecimais (16 bytes, 128 bits) e os quatro lados `top`, `right`, `bottom`, `left` em `edge_banding`. Documentar a URL pública como `/p/{qr_token}` e o POST autenticado como `/v1/revisions`.
 
 - [ ] **Step 4: Executar validação de fixture válida e inválida**
 
@@ -220,6 +220,8 @@ git commit -m "feat: add mobile QR furniture viewer"
 
 ### Task 5: Configurar deploy e verificar o fluxo público
 
+Escopo desta execução: preparar e validar localmente. `_redirects` já foi adicionado na Task 4 e deve ser preservado e verificado. Recursos, migrations remotas, push e deploy serão executados posteriormente pelo administrador; nenhum URL de produção é criado nesta task.
+
 **Files:**
 - Create: `viewer/public/_redirects`
 - Modify: `README.md`
@@ -232,7 +234,7 @@ git commit -m "feat: add mobile QR furniture viewer"
 
 - [ ] **Step 1: Escrever teste de rota profunda**
 
-Testar que o parser de rota aceita apenas `/p/<token-hex-64>` e rejeita `/`, tokens curtos e segmentos adicionais.
+Testar que o parser de rota aceita apenas `/p/<token-hex-32>` (128 bits) e rejeita `/`, tokens curtos, tokens de 64 caracteres e segmentos adicionais. Extrair a regra para `viewer/src/route.ts`, consumida por `main.ts`.
 
 - [ ] **Step 2: Executar teste para confirmar falha**
 
@@ -261,5 +263,5 @@ git commit -m "docs: configure Pages deployment for QR viewer"
 
 - Cobertura da especificação: esta parte entrega o serviço centralizado, URL pública permanente, token não identificável, revisão atual atômica, R2/D1 e a visualização móvel com destaque de peça.
 - Limites intencionais: metadados e impressão dentro do SketchUp ficam no plano `2026-10-17-plugin-etiquetas-qr.md`; domínio próprio, AR, GLB e login não entram neste plano.
-- Consistência: `RevisionV1` é o único payload compartilhado e todos os tokens são `qr_token` hexadecimais de 64 caracteres.
+- Consistência: `RevisionV1` é o único payload compartilhado e todos os tokens públicos são `qr_token` de 32 caracteres hexadecimais (16 bytes, 128 bits). O hash SHA-256 de uma credencial privada tem 64 caracteres e não é um QR.
 - Review Focus: os cinco cenários no cabeçalho estão cobertos respectivamente nas Tasks 3, 3, 3, 4 e 5.
