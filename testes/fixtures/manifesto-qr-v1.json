@@ -1,0 +1,25 @@
+{
+  "schema_version": "1",
+  "project_id": "project-catalogo-qr",
+  "revision_id": "rev-1",
+  "synced_at": "2026-10-17T22:00:00Z",
+  "modules": [
+    {
+      "module_id": "modulo-catalogo-qr",
+      "name": "Balcão da pia",
+      "environment": "Cozinha",
+      "pieces": [
+        {
+          "logical_key": "chave-LATERAL_ESQUERDA",
+          "qr_token": "0123456789abcdef0123456789abcdef",
+          "name": "Lateral esquerda",
+          "cut_mm": [18, 560, 720],
+          "transform_mm": [9, 280, 360, 0],
+          "material": "MDF Freijó Puro",
+          "edge_banding": { "top": true, "right": false, "bottom": false, "left": false },
+          "visible": true
+        }
+      ]
+    }
+  ]
+}
