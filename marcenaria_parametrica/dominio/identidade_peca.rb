@@ -14,6 +14,9 @@ module MarcenariaParametrica
       codigo = peca[:codigo].to_s
       raise ArgumentError, 'A peça precisa de um código estável.' if codigo.strip.empty?
 
+      # O número de fabricação das divisões muda quando outra divisão é removida.
+      # Cada vão admite uma divisão; tipo + origem mantém a peça sem confundir lados.
+      codigo = codigo.sub(/\A(PRATELEIRA|DIVISORIA)_\d+\z/, '\1') if texto(peca[:vao_id])
       # Não depende de dimensões, posição, nome de exibição ou dados do cliente.
       JSON.generate([codigo, ORIGENS.keys.map { |origem| peca[origem].to_s }])
     end
@@ -44,7 +47,9 @@ module MarcenariaParametrica
 
         peca = { codigo: codigo }
         ORIGENS.each { |origem, atributo| peca[origem] = grupo.get_attribute(DICIONARIO, atributo) }
-        chave = texto(grupo.get_attribute(DICIONARIO, 'chave_logica')) || chave_logica(peca)
+        # Recalcula a chave semântica para migrar chaves antigas com número global,
+        # conservando o QR e o material da própria peça anterior à reconstrução.
+        chave = chave_logica(peca)
         padrao_anterior = grupo.get_attribute(DICIONARIO, 'material_padrao')
         substituicao_anterior = grupo.get_attribute(DICIONARIO, 'material_sobrescrito')
         padrao = texto(padrao_anterior) || 'MDP'

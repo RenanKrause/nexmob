@@ -41,6 +41,19 @@ class TesteIdentidadePeca < Minitest::Test
     assert_equal 6, pecas.map { |peca| @identidade.chave_logica(peca) }.uniq.length
   end
 
+  def test_divisao_usa_tipo_e_vao_sem_depender_do_numero_de_fabricacao
+    %w[PRATELEIRA DIVISORIA].each do |tipo|
+      assert_equal @identidade.chave_logica(codigo: "#{tipo}_3", vao_id: 'vao_D'),
+                   @identidade.chave_logica(codigo: "#{tipo}_2", vao_id: 'vao_D')
+    end
+    refute_equal @identidade.chave_logica(codigo: 'PRATELEIRA_2', vao_id: 'vao_D'),
+                 @identidade.chave_logica(codigo: 'DIVISORIA_2', vao_id: 'vao_D')
+    refute_equal @identidade.chave_logica(codigo: 'PRATELEIRA_2', vao_id: 'vao_E'),
+                 @identidade.chave_logica(codigo: 'PRATELEIRA_2', vao_id: 'vao_D')
+    refute_equal @identidade.chave_logica(codigo: 'PRATELEIRA_1'),
+                 @identidade.chave_logica(codigo: 'PRATELEIRA_2')
+  end
+
   def test_nao_cria_chave_ambigua_para_peca_sem_codigo
     assert_raises(ArgumentError) { @identidade.chave_logica(nome: 'Lateral') }
   end

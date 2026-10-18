@@ -1,5 +1,6 @@
 require 'minitest/autorun'
 require_relative '../marcenaria_parametrica/construtores/construtor_balcao_inferior'
+require_relative '../marcenaria_parametrica/dominio/edicao_divisoes'
 
 class Numeric
   def mm
@@ -121,6 +122,40 @@ class ModeloDeTeste
 end
 
 class TesteMontagemBalcaoInferior < Minitest::Test
+  def test_excluir_divisao_anterior_preserva_qr_e_material_da_sobrevivente_renumerada
+    construtor = MarcenariaParametrica::ConstrutorBalcaoInferior.new(ModeloDeTeste.new)
+    parametros = MarcenariaParametrica::ConstrutorBalcaoInferior::PADRAO
+    grupo = construtor.construir(parametros, [0, 0, 0])
+    divisoes = [
+      { 'vao_id' => 'vao', 'tipo' => 'divisoria', 'proporcao' => 0.5 },
+      { 'vao_id' => 'vao_E', 'tipo' => 'prateleira', 'proporcao' => 0.5 },
+      { 'vao_id' => 'vao_D', 'tipo' => 'prateleira', 'proporcao' => 0.5 }
+    ]
+    construtor.atualizar(grupo, parametros, divisoes)
+    dicionario = 'marcenaria_parametrica_peca'
+    origem = grupo.entities.grupos.find { |chapa| chapa.get_attribute(dicionario, 'vao_origem') == 'vao_D' }
+    assert_equal 'PRATELEIRA_3', origem.get_attribute(dicionario, 'codigo')
+    token = origem.get_attribute(dicionario, 'qr_token')
+    origem.set_attribute(dicionario, 'material_sobrescrito', 'MDF Freijó Puro')
+    # Simula .skp gravado antes da correção, cuja chave incluía o número global.
+    origem.set_attribute(dicionario, 'chave_logica', '["PRATELEIRA_3",["vao_D","","","",""]]')
+    restantes = MarcenariaParametrica::EdicaoDivisoes.excluir(parametros, divisoes, 'vao_E')
+
+    construtor.atualizar(grupo, parametros, restantes)
+
+    sobrevivente = grupo.entities.grupos.find { |chapa| chapa.get_attribute(dicionario, 'vao_origem') == 'vao_D' }
+    assert_equal 'PRATELEIRA_2', sobrevivente.get_attribute(dicionario, 'codigo')
+    assert_equal token, sobrevivente.get_attribute(dicionario, 'qr_token')
+    assert_equal 'MDF Freijó Puro', sobrevivente.get_attribute(dicionario, 'material_sobrescrito')
+    assert_equal 'MDF Freijó Puro', sobrevivente.get_attribute(dicionario, 'material')
+    assert_equal 'frente', sobrevivente.get_attribute(dicionario, 'fita_borda')
+    assert_equal 8, grupo.entities.grupos.map { |chapa| chapa.get_attribute(dicionario, 'chave_logica') }.uniq.length
+    grupo.entities.grupos.reject { |chapa| chapa == sobrevivente }.each do |chapa|
+      refute_equal token, chapa.get_attribute(dicionario, 'qr_token')
+      assert_equal '', chapa.get_attribute(dicionario, 'material_sobrescrito')
+    end
+  end
+
   def test_reconstrucao_preserva_qr_e_material_apenas_na_lateral_editada
     construtor = MarcenariaParametrica::ConstrutorBalcaoInferior.new(ModeloDeTeste.new)
     parametros = MarcenariaParametrica::ConstrutorBalcaoInferior::PADRAO
