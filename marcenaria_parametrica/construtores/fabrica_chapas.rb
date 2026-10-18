@@ -1,8 +1,10 @@
 require_relative '../dominio/plano_balcao_inferior'
+require_relative '../dominio/identidade_peca'
 
 module MarcenariaParametrica
   class FabricaChapas
-    def self.criar(entidades, peca)
+    def self.criar(entidades, peca, anteriores = {})
+      atributos = IdentidadePeca.atributos_para(peca, anteriores)
       chapa = entidades.add_group
       chapa.name = peca[:nome]
       largura, profundidade, altura = peca[:dimensoes_mm].map(&:mm)
@@ -18,7 +20,8 @@ module MarcenariaParametrica
       chapa.transformation = Geom::Transformation.new(peca[:posicao_mm].map(&:mm))
       chapa.set_attribute(PlanoBalcaoInferior::DICIONARIO_PECA, 'codigo', peca[:codigo])
       chapa.set_attribute(PlanoBalcaoInferior::DICIONARIO_PECA, 'nome', peca[:nome])
-      chapa.set_attribute(PlanoBalcaoInferior::DICIONARIO_PECA, 'material', 'MDP')
+      atributos.each { |chave, valor| chapa.set_attribute(PlanoBalcaoInferior::DICIONARIO_PECA, chave, valor) }
+      chapa.set_attribute(PlanoBalcaoInferior::DICIONARIO_PECA, 'material', IdentidadePeca.material_efetivo(chapa))
       chapa.set_attribute(PlanoBalcaoInferior::DICIONARIO_PECA, 'comprimento_mm', peca[:corte_mm][0])
       chapa.set_attribute(PlanoBalcaoInferior::DICIONARIO_PECA, 'largura_mm', peca[:corte_mm][1])
       chapa.set_attribute(PlanoBalcaoInferior::DICIONARIO_PECA, 'espessura_mm', peca[:corte_mm][2])

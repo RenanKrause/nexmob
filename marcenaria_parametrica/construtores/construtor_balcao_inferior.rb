@@ -69,8 +69,9 @@ module MarcenariaParametrica
       @modelo.start_operation('Editar balcão inferior', true) if gerenciar_operacao
       operacao_iniciada = gerenciar_operacao
       grupo.make_unique
+      anteriores = IdentidadePeca.capturar(grupo.entities)
       grupo.entities.clear!
-      preencher(grupo, plano, valores, divisoes, gavetas, frentes)
+      preencher(grupo, plano, valores, divisoes, gavetas, frentes, anteriores)
       @modelo.commit_operation if gerenciar_operacao
       operacao_iniciada = false
       grupo
@@ -81,9 +82,13 @@ module MarcenariaParametrica
 
     private
 
-    def preencher(grupo, plano, valores, divisoes, gavetas, frentes)
+    def preencher(grupo, plano, valores, divisoes, gavetas, frentes, anteriores = {})
       pecas = plano + PlanoGavetas.planejar(valores, divisoes, gavetas) + PlanoFrentes.planejar(valores, divisoes, gavetas, frentes)
-      pecas.each { |peca| FabricaChapas.criar(grupo.entities, peca) }
+      material_padrao = grupo.get_attribute(DICIONARIO_MODULO, 'material_padrao')
+      pecas.each do |peca|
+        peca = peca.merge(material_padrao: material_padrao) if material_padrao.is_a?(String) && !material_padrao.strip.empty?
+        FabricaChapas.criar(grupo.entities, peca, anteriores)
+      end
       grupo.set_attribute(DICIONARIO_MODULO, 'tipo', TIPO)
       ModuloParametrico.inicializar(grupo)
       grupo.set_attribute(DICIONARIO_MODULO, 'versao_esquema', 2)

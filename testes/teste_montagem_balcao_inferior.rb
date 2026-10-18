@@ -57,6 +57,8 @@ module Sketchup
 end
 
 class EntidadesDeTeste
+  include Enumerable
+
   attr_reader :grupos, :faces
 
   def initialize
@@ -75,6 +77,10 @@ class EntidadesDeTeste
   def clear!
     @grupos.clear
     @faces.clear
+  end
+
+  def each(&bloco)
+    (@grupos + @faces).each(&bloco)
   end
 end
 
@@ -115,6 +121,102 @@ class ModeloDeTeste
 end
 
 class TesteMontagemBalcaoInferior < Minitest::Test
+  def test_reconstrucao_preserva_qr_e_material_apenas_na_lateral_editada
+    construtor = MarcenariaParametrica::ConstrutorBalcaoInferior.new(ModeloDeTeste.new)
+    parametros = MarcenariaParametrica::ConstrutorBalcaoInferior::PADRAO
+    grupo = construtor.construir(parametros, [0, 0, 0])
+    dicionario = 'marcenaria_parametrica_peca'
+    antigas = grupo.entities.grupos.to_h { |chapa| [chapa.get_attribute(dicionario, 'codigo'), chapa] }
+    tokens = antigas.transform_values { |chapa| chapa.get_attribute(dicionario, 'qr_token') }
+    antigas['LATERAL_ESQUERDA'].set_attribute(dicionario, 'material_sobrescrito', 'MDF Freijó Puro')
+    grupo.set_attribute('marcenaria_parametrica_modulo', 'material_padrao', 'MDF Branco')
+
+    2.times do
+      construtor.atualizar(grupo, parametros.merge('largura_mm' => 900))
+      novas = grupo.entities.grupos.to_h { |chapa| [chapa.get_attribute(dicionario, 'codigo'), chapa] }
+
+      novas.each do |codigo, chapa|
+        assert_match(/\A[0-9a-f]{32}\z/, chapa.get_attribute(dicionario, 'qr_token'))
+        assert_equal tokens.fetch(codigo), chapa.get_attribute(dicionario, 'qr_token')
+        assert_equal 'MDF Branco', chapa.get_attribute(dicionario, 'material_padrao')
+        assert_equal(codigo == 'LATERAL_ESQUERDA' ? 'MDF Freijó Puro' : 'MDF Branco', chapa.get_attribute(dicionario, 'material'))
+      end
+      assert_equal 'frente', novas['LATERAL_ESQUERDA'].get_attribute(dicionario, 'fita_borda')
+    end
+  end
+
+  def test_reconstrucao_migra_material_legado_sem_transferir_para_outra_lateral
+    construtor = MarcenariaParametrica::ConstrutorBalcaoInferior.new(ModeloDeTeste.new)
+    grupo = Sketchup::Group.new
+    grupo.set_attribute('marcenaria_parametrica_modulo', 'tipo', 'balcao_inferior')
+    grupo.set_attribute('marcenaria_parametrica_modulo', 'versao_esquema', 2)
+    antiga = grupo.entities.add_group
+    antiga.set_attribute('marcenaria_parametrica_peca', 'codigo', 'LATERAL_ESQUERDA')
+    antiga.set_attribute('marcenaria_parametrica_peca', 'material', 'MDF Freijó Puro')
+
+    construtor.atualizar(grupo, MarcenariaParametrica::ConstrutorBalcaoInferior::PADRAO)
+
+    novas = grupo.entities.grupos.to_h { |chapa| [chapa.get_attribute('marcenaria_parametrica_peca', 'codigo'), chapa] }
+    assert_equal 'MDF Freijó Puro', novas['LATERAL_ESQUERDA'].get_attribute('marcenaria_parametrica_peca', 'material_sobrescrito')
+    assert_equal 'MDP', novas['LATERAL_DIREITA'].get_attribute('marcenaria_parametrica_peca', 'material')
+  end
+
+  def test_fabrica_preserva_qr_e_aplica_novo_padrao_sem_override
+    fabrica = MarcenariaParametrica::FabricaChapas
+    dicionario = 'marcenaria_parametrica_peca'
+    peca = MarcenariaParametrica::ConstrutorBalcaoInferior.planejar(MarcenariaParametrica::ConstrutorBalcaoInferior::PADRAO).first
+    antiga = fabrica.criar(EntidadesDeTeste.new, peca)
+    atributos = %w[chave_logica qr_token material_padrao material_sobrescrito].to_h do |chave|
+      [chave, antiga.get_attribute(dicionario, chave)]
+    end
+    nova = fabrica.criar(EntidadesDeTeste.new, peca.merge(material_padrao: 'MDF Branco'), atributos['chave_logica'] => atributos)
+
+    assert_equal atributos['qr_token'], nova.get_attribute(dicionario, 'qr_token')
+    assert_equal 'MDF Branco', nova.get_attribute(dicionario, 'material')
+    assert_equal '', nova.get_attribute(dicionario, 'material_sobrescrito')
+  end
+
+  def test_limpar_substituicao_retorna_ao_padrao_apos_reconstrucao
+    construtor = MarcenariaParametrica::ConstrutorBalcaoInferior.new(ModeloDeTeste.new)
+    parametros = MarcenariaParametrica::ConstrutorBalcaoInferior::PADRAO
+    grupo = construtor.construir(parametros, [0, 0, 0])
+    dicionario = 'marcenaria_parametrica_peca'
+    grupo.entities.grupos.first.set_attribute(dicionario, 'material_sobrescrito', 'MDF Freijó Puro')
+    construtor.atualizar(grupo, parametros)
+    grupo.entities.grupos.first.set_attribute(dicionario, 'material_sobrescrito', '')
+
+    construtor.atualizar(grupo, parametros)
+
+    assert_equal 'MDP', grupo.entities.grupos.first.get_attribute(dicionario, 'material')
+    assert_equal '', grupo.entities.grupos.first.get_attribute(dicionario, 'material_sobrescrito')
+  end
+
+  def test_reconstrucao_preserva_origens_e_qrs_de_gavetas_e_frentes
+    construtor = MarcenariaParametrica::ConstrutorBalcaoInferior.new(ModeloDeTeste.new)
+    parametros = MarcenariaParametrica::ConstrutorBalcaoInferior::PADRAO
+    grupo = construtor.construir(parametros, [0, 0, 0])
+    gavetas = MarcenariaParametrica::PlanoGavetas.adicionar(parametros, [], [], 'vao', 2)
+    frentes = MarcenariaParametrica::PlanoFrentes.definir(parametros, [], gavetas, [],
+      'vao_id' => 'vao', 'tipo' => 'frentes_gavetas')
+    construtor.atualizar(grupo, parametros, [], gavetas: gavetas, frentes: frentes)
+    dicionario = 'marcenaria_parametrica_peca'
+    anteriores = grupo.entities.grupos.to_h do |chapa|
+      [chapa.get_attribute(dicionario, 'chave_logica'), chapa.get_attribute(dicionario, 'qr_token')]
+    end
+    assert_equal 18, anteriores.length
+    assert_equal 18, anteriores.values.uniq.length
+
+    construtor.atualizar(grupo, parametros.merge('largura_mm' => 900))
+
+    grupo.entities.grupos.each do |chapa|
+      assert_equal anteriores.fetch(chapa.get_attribute(dicionario, 'chave_logica')), chapa.get_attribute(dicionario, 'qr_token')
+    end
+    frente = grupo.entities.grupos.find { |chapa| chapa.get_attribute(dicionario, 'frente_origem') }
+    assert_equal 'frente_vao', frente.get_attribute(dicionario, 'frente_origem')
+    assert_equal 'vao', frente.get_attribute(dicionario, 'gaveta_vao')
+    assert_equal 'todos', frente.get_attribute(dicionario, 'fita_borda')
+  end
+
   def test_insercao_cria_uuid_uma_vez_e_reconstrucao_preserva_identidade_e_ambiente
     construtor = MarcenariaParametrica::ConstrutorBalcaoInferior.new(ModeloDeTeste.new)
     parametros = MarcenariaParametrica::ConstrutorBalcaoInferior::PADRAO
