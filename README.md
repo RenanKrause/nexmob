@@ -1,10 +1,10 @@
 # Nex Mob
 
-Plugin paramétrico de marcenaria para SketchUp 2026 no Windows. Versão 0.4.7.
+Plugin paramétrico de marcenaria para SketchUp 2026 no Windows. Versão 0.5.0.
 
 ## Instalação
 
-Instale `nex_mob-0.4.7.rbz` pelo Gerenciador de Extensões e reinicie o SketchUp. A barra **Nex Mob** contém quatro comandos: **Inserir módulo**, **Editar módulo e vãos**, **Portas e frentes** e **Modo construtivo**. Ela também pode ser exibida por **Extensões > Nex Mob > Mostrar barra de ferramentas**.
+Instale `nex_mob-0.5.0.rbz` pelo Gerenciador de Extensões e reinicie o SketchUp. A barra **Nex Mob** contém seis comandos: **Inserir módulo**, **Editar módulo e vãos**, **Portas e frentes**, **Modo construtivo**, **Dados do projeto** e **Etiquetas e QR**. Ela também pode ser exibida por **Extensões > Nex Mob > Mostrar barra de ferramentas**.
 
 O arquivo de entrada e a pasta internos continuam como `marcenaria_parametrica`, para atualizar a instalação anterior sem duplicar a extensão. Os dicionários antigos também são preservados para reconhecer os móveis já criados. O nome apresentado no SketchUp, nos diálogos e na barra é Nex Mob.
 
@@ -18,7 +18,7 @@ Adicione prateleiras ou divisórias pelo modal de edição ou pelos botões flut
 
 ## Editor 3D
 
-O painel tem abas **Construir**, **Medidas** e **Visualização**. Modo construtivo continua em um diálogo separado; materiais ficam para uma etapa própria.
+O painel tem abas **Construir**, **Medidas** e **Visualização**. Modo construtivo continua em um diálogo separado; ambiente e materiais são informados no editor do módulo.
 
 - Clique em uma face visível da prateleira ou divisória para selecioná-la. A borda fica vermelha e aparecem as ações **Mover**, **Duplicar** e **Excluir**, além das cotas livres dos dois lados.
 - Arraste a alça quadrada no centro da peça, ou use **Mover**, mova o cursor e clique no destino. A prévia não modifica a geometria; soltar o arraste ou confirmar o destino aplica uma única operação.
@@ -63,6 +63,24 @@ Os dados de fabricação das chapas ficam em `marcenaria_parametrica_peca`, com 
 ## Contrato da API Cloudflare
 
 A sincronização do visualizador usa o contrato versionado `RevisionV1`, descrito em [`docs/api/revision-v1.md`](docs/api/revision-v1.md) e validado por `contracts/revision-v1.schema.json`. O POST autenticado é `/v1/revisions`; cada QR abre `/p/{qr_token}` com token aleatório de **32 caracteres hexadecimais (16 bytes, 128 bits)** e consulta a revisão pública atual. Fixtures válidos e inválidos ficam em `contracts/fixtures/`.
+
+## Projeto, ambientes e etiquetas
+
+Em **Dados do projeto**, salve o nome do cliente e crie os ambientes, por exemplo Cozinha e Lavanderia. Os nomes de ambiente devem ser únicos; um ambiente associado a um móvel não pode ser excluído. Selecione cada módulo e abra **Editar módulo e vãos** para escolher seu ambiente e material padrão. Para uma chapa específica, escolha a peça, selecione **Substituir nesta peça**, informe o material e aplique. **Usar material padrão** remove a substituição. O material individual e o QR acompanham a mesma peça quando suas medidas são reconstruídas.
+
+Abra **Etiquetas e QR**, informe a URL HTTPS completa de sincronização (`https://WORKER/v1/revisions`), a origem HTTPS do visualizador (`https://PAGES`, sem caminho) e a credencial privada fornecida pelo administrador. Esses endereços são exemplos; use os recursos publicados da sua instalação. A credencial fica somente na memória do diálogo e precisa ser informada novamente após fechá-lo. Apenas URLs e preferências de impressão são salvas no computador. Nunca coloque a credencial na URL pública, no modelo ou em capturas de tela.
+
+Use **Atualizar contagem** para reler as peças e **Sincronizar projeto** para publicar a revisão. A listagem considera peças válidas de módulos visíveis e desbloqueados, inclusive aninhados; confira a contagem antes de imprimir. Falhas de rede permitem tentar novamente; credencial recusada exige informar uma válida. Prévia e impressão são liberadas após sincronização bem-sucedida. Alterar móveis, materiais, ambiente ou cliente exige nova sincronização; a conferência Ruby também rejeita uma saída baseada em dados antigos.
+
+O QR público contém somente o token aleatório da peça e pode ser aberto por qualquer pessoa que possua o link. A API pública mostra móvel, ambiente, peças, materiais, dimensões e horário da última sincronização; o nome do cliente fica na etiqueta local e não é enviado no manifesto público. A mesma etiqueta consulta a última revisão publicada: alterações feitas apenas no SketchUp não aparecem no celular. Uma peça removida da última revisão passa a retornar não encontrada; seu token permanece reservado e não é reutilizado para outra identidade. Uma cópia de móvel com identidade duplicada bloqueia a publicação e precisa ser corrigida antes do envio.
+
+### Térmica, PDF A4 e calibração
+
+Para térmica, informe largura e altura reais da etiqueta e selecione a saída térmica; **Imprimir** usa uma etiqueta por página. No diálogo do sistema, selecione a impressora e o tamanho personalizado correspondente, escala **100% / tamanho real**, margens zero quando suportadas e desative cabeçalhos e rodapés. O QR deve ter pelo menos **20 mm** e o texto pelo menos **6 pt**; aumente a etiqueta quando o conteúdo não couber. O tamanho padrão é 99 × 55,8 mm; não há redução automática de texto ou QR para caber em uma etiqueta menor.
+
+**Gerar PDF** sempre usa A4 e abre a impressão do sistema: escolha **Microsoft Print to PDF** (ou Salvar como PDF), papel **A4 retrato**, escala **100%**, sem ajustar à página, cabeçalhos ou rodapés. A folha A4350 contém **2 colunas × 5 linhas**, células fixas de **99 × 55,8 mm**, margens de 6 mm nas laterais e 9 mm no topo/rodapé. O tamanho configurado para a térmica não altera essa grade. O plugin não exporta um PDF silenciosamente; o arquivo e seu destino são escolhidos no diálogo de impressão.
+
+Antes de usar adesivos, use **Imprimir folha de calibração** em papel comum a 100% e sobreponha à folha A4350 contra a luz. Meça as células, confira primeira e última linha e ajuste os deslocamentos X/Y em milímetros. Valores positivos movem a grade para direita/baixo; se a impressão ficou 1 mm à direita, corrija X em −1 mm. Os limites são X ±6 mm e Y ±9 mm. Deslocamentos corrigem posição; se as células estiverem menores ou o erro aumentar entre linhas, corrija a escala/configuração do driver. Repita até alinhar, salve as preferências e faça uma leitura real do QR antes do lote definitivo. A calibração pode ser impressa sem sincronizar.
 
 ## Preparação local do visualizador e da API
 
@@ -151,7 +169,7 @@ INSERT INTO installations (id, token_hash, revoked_at)
 VALUES ('INSTALLATION_ID', 'SHA256_HEX_64', NULL);
 ```
 
-Para arquivo SQL, um nome como `.env.installation.sql` já é ignorado; mantenha somente ID/digest nele. O administrador escolhe **um** destino: `npx wrangler d1 execute DB --local --file .env.installation.sql` para desenvolvimento, ou `npx wrangler d1 execute DB --remote --config wrangler.local.jsonc --file .env.installation.sql` para produção. O digest de 64 caracteres não é o token público de 32. Cada POST envia o segredo original em `Authorization: Bearer …` por HTTPS. Revogue uma instalação preenchendo `revoked_at`; isso bloqueia novos envios, sem expirar os QRs existentes. Não há endpoint de cadastro nem UI de configuração da credencial no plugin nesta task.
+Para arquivo SQL, um nome como `.env.installation.sql` já é ignorado; mantenha somente ID/digest nele. O administrador escolhe **um** destino: `npx wrangler d1 execute DB --local --file .env.installation.sql` para desenvolvimento, ou `npx wrangler d1 execute DB --remote --config wrangler.local.jsonc --file .env.installation.sql` para produção. O digest de 64 caracteres não é o token público de 32. Cada POST envia o segredo original em `Authorization: Bearer …` por HTTPS. Revogue uma instalação preenchendo `revoked_at`; isso bloqueia novos envios, sem expirar os QRs existentes. O cadastro é administrativo; no plugin, o diálogo **Etiquetas e QR** recebe a credencial existente para a sessão.
 
 ### Publicação posterior de Worker e Pages
 
@@ -219,8 +237,29 @@ marcenaria_parametrica/
 
 Os testes unitários Ruby usam Minitest e ficam em `testes/teste_*.rb`; execute cada arquivo separadamente. Os testes de JavaScript usam `node --test testes/*.js`.
 
+No PowerShell, execute os testes Ruby separadamente, interrompendo no primeiro erro:
+
+```powershell
+Get-ChildItem testes/teste_*.rb | ForEach-Object { ruby $_.FullName; if ($LASTEXITCODE -ne 0) { throw "Falhou: $($_.Name)" } }
+node --test testes/*.js
+```
+
 Os scripts `verificar_no_sketchup.rb`, `verificar_fluxos_sketchup.rb` e `verificar_interface_sketchup.rb` verificam a API real em um modelo descartável do SketchUp. Eles cobrem geometria sólida, seleção contínua, aplicação em lote, cópias bloqueadas, Desfazer, cancelamento em erro e a comunicação dos novos diálogos. Não carregue os testes unitários com simulações da API dentro do SketchUp.
 
 O script `verificar_editor_3d_sketchup.rb` testa o editor em um móvel transladado, girado e escalado: seleção, barra flutuante, arraste sem mutação durante a prévia, cancelamento, Desfazer, posição numérica, duplicação/exclusão, alças dos vãos e comunicação real do HtmlDialog.
+
+Para verificar etiquetas, abra um **modelo novo e vazio, sem salvar**, no SketchUp 2026. No Console Ruby, carregue o script do checkout (substitua o caminho):
+
+```ruby
+load 'C:/caminho/Plugin Skechupt/testes/verificar_etiquetas_sketchup.rb'
+```
+
+O script recusa modelos já preenchidos, cria dois móveis em ambientes distintos, substitui um material e reconstrói um módulo. Confere 12 tokens hexadecimais de 32 caracteres distintos, preservação das identidades e material, catálogo e manifesto público. Abre uma prévia local e aguarda até 30 segundos pela resposta do HtmlDialog: são verificadas dez células na primeira A4, duas na segunda, células de 99 × 55,8 mm, QR de pelo menos 20 mm e ausência de overflow. Aguarde **PASS QA etiquetas**; a mensagem inicial de espera não significa aprovação. **FAIL QA etiquetas** informa a etapa/erro no console; consulte também `MarcenariaParametrica::VerificacaoEtiquetas.resultado`. Descarte o modelo e abra outro novo antes de repetir. Não carregue Minitest/simulações junto desse teste.
+
+A prévia do verificador usa domínio fictício `.invalid`, não envia dados, não imprime e não testa Pages. O aceite ainda exige, no equipamento de destino: rodar os testes Ruby e esse verificador, calibrar e imprimir uma folha A4350 a 100%, testar a térmica e escanear uma etiqueta sincronizada no Pages publicado. Confira o destaque da peça correta e a data de sincronização; altere o material, sincronize de novo e abra a mesma etiqueta para confirmar a atualização. Sem Ruby/SketchUp, impressora e implantação disponíveis, esses passos permanecem pendentes; passar nos testes Node não os substitui.
+
+## Pacote local da extensão
+
+O `.rbz` é um ZIP contendo somente `marcenaria_parametrica.rb` e a pasta `marcenaria_parametrica/` na raiz. Gere `nex_mob-0.5.0.rbz` localmente com um compactador ZIP, preservando esses caminhos e incluindo os arquivos JavaScript/vendor, HTML, CSS, ícones e licença do QR. Os arquivos `*.rbz` são ignorados pelo Git; distribua somente depois dos aceites acima. Não inclua README, testes, viewer, Worker, credenciais, `.env*`, `node_modules`, `.wrangler`, `.superpowers`, `.git` ou o worktree. Inspecione os nomes das entradas do ZIP antes de instalar.
 
 
