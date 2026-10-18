@@ -283,10 +283,53 @@ describe('revision HTTP API', () => {
     });
   });
 
+  it('rejects replacing a permanent QR token and keeps the original QR on the latest accepted revision', async () => {
+    expect((await post()).status).toBe(201);
+    const swapped = revision();
+    swapped.revision_id = 'token-swap';
+    swapped.modules[0].pieces[0].qr_token = 'd'.repeat(32);
+    expect((await post(swapped)).status).toBe(409);
+    expect((await current())?.current_revision_id).toBe(fixture.revision_id);
+    expect(await env.DB.prepare("SELECT id FROM revisions WHERE id = 'token-swap'").first()).toBeNull();
+    expect((await get('d'.repeat(32))).status).toBe(404);
+    expect((await get()).status).toBe(200);
+
+    const updated = revision();
+    updated.revision_id = 'original-token-updated';
+    updated.synced_at = '2026-10-17T19:00:00Z';
+    updated.modules[0].name = 'Current furniture';
+    updated.modules[0].pieces[0].cut_mm = [900, 600, 18];
+    expect((await post(updated)).status).toBe(201);
+    expect(await (await get()).json()).toMatchObject({
+      synced_at: '2026-10-17T19:00:00Z',
+      module: { name: 'Current furniture', pieces: [{ qr_token: token, cut_mm: [900, 600, 18] }, { logical_key: 'base' }] },
+    });
+  });
+
+  it('rolls back the complete publication if another token reserves the same piece identity during R2 upload', async () => {
+    expect((await post()).status).toBe(201);
+    const update = revision(); update.revision_id = 'identity-reservation-race';
+    update.modules[0].pieces.push(
+      { ...structuredClone(update.modules[0].pieces[0]), logical_key: 'new-side', qr_token: 'd'.repeat(32) },
+      { ...structuredClone(update.modules[0].pieces[0]), logical_key: 'new-shelf', qr_token: 'e'.repeat(32) },
+    );
+    const custom = duringPut(async () => {
+      await env.DB.prepare('INSERT INTO piece_tokens (token, project_id, module_id, logical_key) VALUES (?, ?, ?, ?)')
+        .bind('f'.repeat(32), fixture.project_id, 'module-a1', 'new-shelf').run();
+    });
+    expect((await post(update, secret, custom)).status).toBe(409);
+    expect((await current())?.current_revision_id).toBe(fixture.revision_id);
+    expect(await env.DB.prepare("SELECT id FROM revisions WHERE id = 'identity-reservation-race'").first()).toBeNull();
+    expect(await env.DB.prepare('SELECT token FROM piece_tokens WHERE token IN (?, ?)')
+      .bind('d'.repeat(32), 'e'.repeat(32)).first()).toBeNull();
+    expect(await (await get()).json()).toMatchObject({ module: { name: 'Balcão inferior' } });
+  });
+
   it('rolls back publication if a token is reserved for a different module during R2 upload', async () => {
     expect((await post()).status).toBe(201);
     const update = revision(); update.revision_id = 'module-reservation-race';
-    update.modules[0].pieces[0].qr_token = 'd'.repeat(32);
+    update.modules[0].pieces.push({ ...structuredClone(update.modules[0].pieces[0]),
+      logical_key: 'new-piece', qr_token: 'd'.repeat(32) });
     const custom = duringPut(async () => {
       await env.DB.prepare('INSERT INTO piece_tokens (token, project_id, module_id, logical_key) VALUES (?, ?, ?, ?)')
         .bind('d'.repeat(32), fixture.project_id, 'unrelated-replacement-module', 'lateral-esquerda').run();
@@ -318,6 +361,8 @@ describe('revision HTTP API', () => {
     changed.modules[0].pieces.forEach((p, i) => { p.qr_token = String(i + 1).repeat(32); });
     expect((await post(changed, otherSecret)).status).toBe(201);
     expect((await current('other-project'))?.current_revision_id).toBe(fixture.revision_id);
+    expect((await get('1'.repeat(32))).status).toBe(200);
+    expect((await get()).status).toBe(200);
   });
 
   it('rechecks revocation atomically after the R2 write', async () => {
@@ -333,7 +378,8 @@ describe('revision HTTP API', () => {
   it('rolls back the D1 batch if another project claims a token during R2 upload', async () => {
     await post();
     const changed = revision(); changed.revision_id = 'conflict';
-    changed.modules[0].pieces[0].qr_token = 'e'.repeat(32);
+    changed.modules[0].pieces.push({ ...structuredClone(changed.modules[0].pieces[0]),
+      logical_key: 'new-piece', qr_token: 'e'.repeat(32) });
     const custom = duringPut(async () => {
       await env.DB.batch([
         env.DB.prepare("INSERT INTO projects (id, installation_id) VALUES ('racer', 'b')"),

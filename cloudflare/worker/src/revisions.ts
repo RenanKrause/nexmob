@@ -44,11 +44,15 @@ export async function publishRevision(env: Env, installation: Installation, valu
   const tokenIndex = JSON.stringify(revision.modules.flatMap((module) => module.pieces.map((piece) => ({
     token: piece.qr_token.toLowerCase(), module_id: module.module_id, logical_key: piece.logical_key,
   }))));
-  const conflict = await env.DB.prepare(`SELECT t.token FROM json_each(?) p
-    JOIN piece_tokens t ON t.token = json_extract(p.value, '$.token')
-    WHERE t.project_id <> ? OR t.module_id <> json_extract(p.value, '$.module_id')
-      OR t.logical_key <> json_extract(p.value, '$.logical_key') LIMIT 1`)
-    .bind(tokenIndex, revision.project_id).first();
+  const conflict = await env.DB.prepare(`SELECT COALESCE(t.token, reserved.token) AS token FROM json_each(?) p
+    LEFT JOIN piece_tokens t ON t.token = json_extract(p.value, '$.token')
+    LEFT JOIN piece_tokens reserved ON reserved.project_id = ?
+      AND reserved.module_id = json_extract(p.value, '$.module_id')
+      AND reserved.logical_key = json_extract(p.value, '$.logical_key')
+    WHERE (t.token IS NOT NULL AND (t.project_id <> ? OR t.module_id <> json_extract(p.value, '$.module_id')
+      OR t.logical_key <> json_extract(p.value, '$.logical_key')))
+      OR (reserved.token IS NOT NULL AND reserved.token <> json_extract(p.value, '$.token')) LIMIT 1`)
+    .bind(tokenIndex, revision.project_id, revision.project_id).first();
   if (conflict) throw new ApiError(409, 'token_conflict');
 
   const key = `revisions/${encodeURIComponent(revision.project_id)}/${encodeURIComponent(revision.revision_id)}.json`;
@@ -79,6 +83,9 @@ export async function publishRevision(env: Env, installation: Installation, valu
           ELSE NULL END`).bind(revision.project_id, installation.id),
       env.DB.prepare('INSERT INTO revisions (id, project_id, synced_at, r2_key) VALUES (?, ?, ?, ?)')
         .bind(revision.revision_id, revision.project_id, revision.synced_at, key),
+      // The identity UNIQUE constraint also rejects a different token reserved
+      // after the preflight check. Only same-token UPSERTs may pass; any other
+      // identity collision aborts this whole batch, including its revision.
       env.DB.prepare(`INSERT INTO piece_tokens (token, project_id, module_id, logical_key)
         SELECT json_extract(value, '$.token'), ?, json_extract(value, '$.module_id'), json_extract(value, '$.logical_key')
         FROM json_each(?) WHERE true

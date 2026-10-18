@@ -1,3 +1,6 @@
+-- Pre-deploy initial schema: no remote database has applied this migration.
+-- Already-migrated local databases need a deliberate rebuild or data migration;
+-- reapplying 0001 does not upgrade an older schema.
 -- Installation credentials are high-entropy secrets provisioned out of band.
 -- Store only their lowercase SHA-256 digest; public QRs live in piece_tokens.
 CREATE TABLE installations (
@@ -31,6 +34,8 @@ CREATE TABLE piece_tokens (
   project_id TEXT NOT NULL REFERENCES projects(id),
   -- Permanent QR identity includes the furniture module, not only the key.
   module_id TEXT NOT NULL CHECK (length(module_id) > 0),
-  logical_key TEXT NOT NULL
+  logical_key TEXT NOT NULL,
+  -- Each stable piece keeps exactly one issued token across all revisions.
+  UNIQUE (project_id, module_id, logical_key)
 );
 CREATE INDEX piece_tokens_project_id ON piece_tokens(project_id);
