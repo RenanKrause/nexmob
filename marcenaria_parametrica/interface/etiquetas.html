@@ -5,6 +5,15 @@
 <body>
   <header><p>NEX MOB / FABRICAÇÃO</p><h1>Etiquetas e QR</h1><span id="contagem-etiquetas">Aguardando projeto</span></header>
   <main>
+    <form id="formulario-sincronizacao" autocomplete="off">
+      <fieldset><legend>Sincronização do projeto</legend>
+        <label>URL da API (POST /v1/revisions)<input id="sync_url" type="url" required placeholder="https://sua-api.workers.dev/v1/revisions"></label>
+        <label>URL pública do visualizador<input id="viewer_base_url" type="url" required placeholder="https://seu-visualizador.pages.dev"></label>
+        <label>Credencial desta sessão<input id="credencial" type="password" autocomplete="new-password" spellcheck="false"></label>
+        <p id="estado-credencial">Informe a credencial para esta sessão.</p><p>A credencial é apagada do campo ao enviar e não é salva no projeto nem nas preferências.</p>
+        <button id="botao-sincronizar" type="submit">Sincronizar projeto</button><button id="botao-atualizar-lote" type="button">Atualizar contagem</button>
+      </fieldset>
+    </form>
     <form id="formulario-etiquetas">
       <fieldset><legend>Tamanho ativo da etiqueta térmica</legend><div class="campos">
         <label>Largura (mm)<input id="largura_mm" type="number" step="0.1" min="1" required></label>

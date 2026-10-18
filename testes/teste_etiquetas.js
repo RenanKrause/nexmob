@@ -75,14 +75,16 @@ teste('lote vazio, medidas ausentes e texto que não cabe impedem a geração em
 
 function interfaceFalsa() {
   const nomes = ['largura_mm', 'altura_mm', 'qr_mm', 'texto_pt', 'offset_x_mm', 'offset_y_mm', 'modo_saida',
-    'botao-previa', 'botao-imprimir', 'botao-pdf', 'botao-calibracao', 'formulario-etiquetas', 'mensagem-etiquetas', 'contagem-etiquetas', 'previa-etiquetas'];
+    'botao-previa', 'botao-imprimir', 'botao-pdf', 'botao-calibracao', 'formulario-etiquetas', 'mensagem-etiquetas', 'contagem-etiquetas', 'previa-etiquetas',
+    'formulario-sincronizacao', 'sync_url', 'viewer_base_url', 'credencial', 'estado-credencial', 'botao-sincronizar', 'botao-atualizar-lote'];
   const elementos = Object.fromEntries(nomes.map(nome => [nome, { value: '', textContent: '', disabled: false, hidden: false,
     eventos: {}, addEventListener(evento, acao) { this.eventos[evento] = acao; } }]));
   elementos.modo_saida.value = 'termica';
   const chamadas = [];
   const documento = { getElementById(id) { return elementos[id]; } };
   const janela = { sketchup: { etiquetas_prontas() { chamadas.push(['pronto']); },
-    salvar_configuracao_etiquetas(valor) { chamadas.push(['salvar', valor]); }, solicitar_previa(valor) { chamadas.push(['previa', valor]); } } };
+    salvar_configuracao_etiquetas(valor) { chamadas.push(['salvar', valor]); }, solicitar_previa(valor) { chamadas.push(['previa', valor]); },
+    sincronizar_etiquetas(valor) { chamadas.push(['sincronizar', valor]); }, atualizar_lote() { chamadas.push(['atualizar']); } } };
   const impressoes = [];
   const api = E.conectarInterface(documento, janela, (dados, modo, imprimir) => impressoes.push({ dados, modo, imprimir }));
   return { elementos, chamadas, janela, impressoes, api };
@@ -94,12 +96,14 @@ teste('interface recebe lote, mostra contagem, valida prévia e pede salvar medi
   t.janela.receberDadosEtiquetas({ itens: [item], configuracao: config, sincronizado: true });
   afirmar.match(t.elementos['contagem-etiquetas'].textContent, /1/);
   t.elementos['botao-previa'].eventos.click();
+  afirmar.equal(t.chamadas[1][0], 'previa');
+  t.janela.prepararSaidaEtiquetas({ itens: [item], configuracao: config, modo: 'termica', imprimir: false });
   afirmar.equal(t.impressoes[0].imprimir, false);
   t.elementos.largura_mm.value = '110';
   t.elementos['formulario-etiquetas'].eventos.submit({ preventDefault() {} });
-  afirmar.equal(t.chamadas[1][0], 'salvar');
-  afirmar.equal(JSON.parse(t.chamadas[1][1]).largura_mm, 110);
-  afirmar.equal(t.chamadas[2][0], 'previa');
+  afirmar.equal(t.chamadas[2][0], 'salvar');
+  afirmar.equal(JSON.parse(t.chamadas[2][1]).largura_mm, 110);
+  afirmar.equal(t.chamadas[3][0], 'previa');
 });
 
 teste('interface encaminha impressão direta e Gerar PDF A4 e bloqueia conteúdo alterado/ilegível', () => {
@@ -107,12 +111,98 @@ teste('interface encaminha impressão direta e Gerar PDF A4 e bloqueia conteúdo
   afirmar.equal(t.elementos['botao-imprimir'].disabled, true);
   t.janela.receberDadosEtiquetas({ itens: [item], configuracao: config, sincronizado: true });
   t.elementos['botao-imprimir'].eventos.click();
+  t.janela.prepararSaidaEtiquetas({ itens: [item], configuracao: config, modo: 'termica', imprimir: true });
   t.elementos['botao-pdf'].eventos.click();
+  t.janela.prepararSaidaEtiquetas({ itens: [item], configuracao: config, modo: 'a4', imprimir: true });
   afirmar.deepEqual(t.impressoes.map(p => [p.modo, p.imprimir]), [['termica', true], ['a4', true]]);
   t.elementos.qr_mm.value = '19';
   t.elementos['botao-imprimir'].eventos.click();
   afirmar.equal(t.impressoes.length, 2);
   afirmar.match(t.elementos['mensagem-etiquetas'].textContent, /20/);
+});
+
+teste('sincronização valida URL, exige credencial e apaga o campo antes do callback', () => {
+  const t = interfaceFalsa();
+  const enviar = () => t.elementos['formulario-sincronizacao'].eventos.submit({ preventDefault() {} });
+  t.elementos.sync_url.value = 'https://worker.example/v1/revisions';
+  t.elementos.viewer_base_url.value = 'https://viewer.example';
+  enviar();
+  afirmar.equal(t.chamadas.length, 1);
+  t.elementos.credencial.value = 'credencial-ficticia';
+  t.elementos.viewer_base_url.value = 'https://usuario:senha@viewer.example';
+  enviar();
+  afirmar.equal(t.chamadas.length, 1);
+  t.elementos.viewer_base_url.value = 'https://viewer.example';
+  enviar();
+  afirmar.equal(t.chamadas[1][0], 'sincronizar');
+  afirmar.equal(t.elementos.credencial.value, '');
+  afirmar.equal(JSON.parse(t.chamadas[1][1]).token, 'credencial-ficticia');
+  afirmar.equal(t.elementos['botao-previa'].disabled, true);
+  afirmar.doesNotMatch(t.elementos['mensagem-etiquetas'].textContent, /credencial-ficticia/);
+});
+
+teste('contagem e estados de sincronização distinguem rede, 401, validação e sucesso sem renderizar resposta externa', () => {
+  const t = interfaceFalsa();
+  afirmar.equal(typeof t.janela.estadoSincronizacao, 'function');
+  t.janela.receberDadosEtiquetas({ itens: [item, item], configuracao: config, sincronizado: true });
+  afirmar.match(t.elementos['contagem-etiquetas'].textContent, /2 peças/);
+  const mensagens = new Set();
+  for (const status of ['sincronizando', 'rede', 'credencial_recusada', 'validacao', 'sucesso']) {
+    t.janela.estadoSincronizacao({ status, mensagem: '<resposta externa com segredo>' });
+    mensagens.add(t.elementos['mensagem-etiquetas'].textContent);
+    afirmar.doesNotMatch(t.elementos['mensagem-etiquetas'].textContent, /resposta externa/);
+    afirmar.equal(t.elementos['botao-previa'].disabled, true);
+  }
+  afirmar.equal(mensagens.size, 5);
+});
+
+teste('falha de rede permite tentar de novo com credencial em memória e 401 exige substituição', () => {
+  const t = interfaceFalsa();
+  t.elementos.sync_url.value = 'https://worker.example/v1/revisions';
+  t.elementos.viewer_base_url.value = 'https://viewer.example';
+  t.janela.estadoSincronizacao({ status: 'rede', credencial_configurada: true });
+  t.elementos['formulario-sincronizacao'].eventos.submit({ preventDefault() {} });
+  afirmar.equal(t.chamadas[1]?.[0], 'sincronizar');
+  afirmar.equal(JSON.parse(t.chamadas[1][1]).token, '');
+  t.janela.estadoSincronizacao({ status: 'credencial_recusada', credencial_configurada: false });
+  t.elementos['formulario-sincronizacao'].eventos.submit({ preventDefault() {} });
+  afirmar.equal(t.chamadas.length, 2);
+  afirmar.match(t.elementos['mensagem-etiquetas'].textContent, /credencial/i);
+});
+
+teste('saída só é renderizada após conferência Ruby e erro limpa a prévia antiga', () => {
+  const t = interfaceFalsa();
+  t.janela.receberDadosEtiquetas({ itens: [item], configuracao: config, sincronizado: true });
+  t.elementos['botao-imprimir'].eventos.click();
+  afirmar.equal(t.impressoes.length, 0);
+  afirmar.equal(JSON.parse(t.chamadas[1][1]).modo, 'termica');
+  afirmar.equal(JSON.parse(t.chamadas[1][1]).imprimir, true);
+  t.elementos['previa-etiquetas'].srcdoc = '<article>Prévia anterior</article>';
+  t.janela.erroEtiquetas('O projeto mudou. Sincronize novamente.');
+  afirmar.equal(t.elementos['previa-etiquetas'].srcdoc, '');
+  afirmar.equal(t.elementos['botao-imprimir'].disabled, true);
+  t.elementos['botao-pdf'].eventos.click();
+  afirmar.equal(t.chamadas.length, 2);
+});
+
+teste('salvar medidas permite continuar imprimindo depois da conferência Ruby', () => {
+  const t = interfaceFalsa();
+  t.janela.receberDadosEtiquetas({ itens: [item], configuracao: config, sincronizado: true });
+  t.elementos['formulario-etiquetas'].eventos.submit({ preventDefault() {} });
+  afirmar.equal(t.elementos['botao-imprimir'].disabled, true);
+  t.janela.prepararSaidaEtiquetas({ itens: [item], configuracao: config, modo: 'termica', imprimir: false });
+  afirmar.equal(t.elementos['botao-imprimir'].disabled, false);
+});
+
+teste('erro do transporte de callback não mostra credencial na interface', () => {
+  const t = interfaceFalsa();
+  t.elementos.sync_url.value = 'https://worker.example/v1/revisions';
+  t.elementos.viewer_base_url.value = 'https://viewer.example';
+  t.elementos.credencial.value = 'credencial-ficticia';
+  t.janela.sketchup.sincronizar_etiquetas = () => { throw new Error('Falha credencial-ficticia'); };
+  t.elementos['formulario-sincronizacao'].eventos.submit({ preventDefault() {} });
+  afirmar.doesNotMatch(t.elementos['mensagem-etiquetas'].textContent, /credencial-ficticia/);
+  afirmar.equal(t.elementos['botao-sincronizar'].disabled, false);
 });
 
 teste('documento preparado mede overflow antes de chamar impressão do sistema', () => {

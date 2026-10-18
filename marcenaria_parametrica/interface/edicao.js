@@ -132,4 +132,5 @@ document.querySelectorAll('[data-elemento]').forEach((botao) => {
   });
 });
 
+if (window.Projeto) window.Projeto.conectarModulo(document, window);
 if (window.sketchup) window.sketchup.pronto();

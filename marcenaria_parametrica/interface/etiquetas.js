@@ -168,16 +168,23 @@
     const campo = id => documento.getElementById(id);
     const mensagem = texto => { campo('mensagem-etiquetas').textContent = texto; };
     const botoes = ['botao-previa', 'botao-imprimir', 'botao-pdf'];
-    let itens = [], entrada = {}, pronto = false;
+    let itens = [], entrada = {}, pronto = false, credencialDisponivel = false;
     const habilitar = valor => { pronto = valor; botoes.forEach(id => { campo(id).disabled = !valor; }); };
     const valores = () => validarConfiguracao(Object.fromEntries(Object.keys(PADRAO).map(chave => [chave, campo(chave).value])));
     const desenhar = renderizar || ((dados, _modo, imprimir) => prepararFrame(campo('previa-etiquetas'), dados, imprimir, mensagem));
     function acao(modo, imprimir, calibracao = false) {
       try {
         if (!pronto && !calibracao) throw new Error('Sincronize o projeto antes de gerar etiquetas.');
-        const dados = montarDocumento(itens, { ...entrada, ...valores() }, modo, calibracao);
-        desenhar(dados, modo, imprimir);
-        mensagem(imprimir ? 'Use escala 100%, sem ajustar à página. Para PDF, escolha Salvar como PDF no diálogo.' : 'Prévia pronta. Confira todos os dados antes de imprimir.');
+        const configuracao = valores();
+        const dados = montarDocumento(itens, { ...entrada, ...configuracao }, modo, calibracao);
+        if (calibracao) {
+          desenhar(dados, modo, imprimir);
+          mensagem('Imprima a calibração A4350 em escala 100%, sem ajustar à página.');
+        } else {
+          if (!janela.sketchup) throw new Error('Abra as etiquetas no SketchUp.');
+          janela.sketchup.solicitar_previa(JSON.stringify({ configuracao, modo, imprimir }));
+          mensagem('Conferindo o projeto sincronizado…');
+        }
       } catch (erro) { mensagem(erro.message); }
     }
     janela.receberDadosEtiquetas = dados => {
@@ -185,18 +192,85 @@
         entrada = dados.configuracao || {};
         const config = validarConfiguracao(entrada);
         itens = dados.itens || [];
+        const conexao = dados.conexao || {};
+        if (conexao.sync_url !== undefined) campo('sync_url').value = conexao.sync_url;
+        if (conexao.viewer_base_url !== undefined) campo('viewer_base_url').value = conexao.viewer_base_url;
+        credencialDisponivel = conexao.credencial_configurada === true;
+        campo('estado-credencial').textContent = credencialDisponivel ? 'Credencial disponível nesta sessão.' : 'Informe a credencial para esta sessão.';
         Object.keys(PADRAO).forEach(chave => { campo(chave).value = config[chave]; });
         campo('contagem-etiquetas').textContent = `${itens.length} peça${itens.length === 1 ? '' : 's'} no projeto`;
         habilitar(itens.length > 0 && dados.sincronizado === true);
         mensagem(dados.mensagem || (pronto ? 'Projeto sincronizado. Etiquetas prontas para prévia.' : 'Sincronize o projeto antes de gerar etiquetas.'));
       } catch (erro) { habilitar(false); mensagem(erro.message); }
     };
-    janela.erroEtiquetas = texto => { habilitar(false); mensagem(String(texto)); };
+    const limparPrevia = () => { campo('previa-etiquetas').onload = null; campo('previa-etiquetas').srcdoc = ''; };
+    janela.erroEtiquetas = texto => { habilitar(false); limparPrevia(); mensagem(String(texto)); };
+    const estados = {
+      sincronizando: 'Sincronizando a revisão do projeto…', sucesso: 'Revisão sincronizada com sucesso.',
+      rede: 'Falha de rede. Confira a conexão e sincronize novamente.',
+      credencial_recusada: 'Credencial recusada (401). Informe uma credencial válida.',
+      validacao: 'Revisão recusada. Verifique os dados e a permissão do projeto.',
+      configuracao: 'Configure URLs HTTPS e uma credencial válidas.',
+      servidor: 'Serviço indisponível. Tente sincronizar novamente.'
+    };
+    janela.estadoSincronizacao = dados => {
+      habilitar(false);
+      limparPrevia();
+      campo('botao-sincronizar').disabled = dados.status === 'sincronizando';
+      if (typeof dados.credencial_configurada === 'boolean') {
+        credencialDisponivel = dados.credencial_configurada;
+        campo('estado-credencial').textContent = credencialDisponivel ? 'Credencial disponível nesta sessão.' : 'Informe a credencial para esta sessão.';
+      }
+      if (dados.status === 'credencial_recusada') {
+        credencialDisponivel = false;
+        campo('estado-credencial').textContent = 'Informe uma nova credencial.';
+      }
+      mensagem(estados[dados.status] || estados.servidor);
+    };
+    janela.prepararSaidaEtiquetas = dados => {
+      try {
+        const documentoSaida = montarDocumento(dados.itens, dados.configuracao, dados.modo);
+        itens = dados.itens;
+        entrada = dados.configuracao;
+        desenhar(documentoSaida, dados.modo, dados.imprimir === true);
+        habilitar(true);
+        mensagem(dados.imprimir ? 'Use escala 100%, sem ajustar à página. Para PDF, escolha Salvar como PDF no diálogo.' : 'Prévia pronta. Confira todos os dados antes de imprimir.');
+      } catch (erro) { janela.erroEtiquetas(erro.message); }
+    };
+    campo('formulario-sincronizacao').addEventListener('submit', evento => {
+      evento.preventDefault();
+      try {
+        const sync_url = campo('sync_url').value.trim();
+        const viewer_base_url = campo('viewer_base_url').value.trim();
+        let url;
+        try { url = new URL(sync_url); } catch (_) { throw new Error(estados.configuracao); }
+        if (url.protocol !== 'https:' || !url.hostname || url.username || url.password || url.search || url.hash || url.pathname !== '/v1/revisions') throw new Error(estados.configuracao);
+        urlPublica({ qr_token: '0'.repeat(32) }, { viewer_base_url });
+        const token = campo('credencial').value;
+        if (!token && !credencialDisponivel) throw new Error('Informe a credencial de sincronização.');
+        if (token && !/^[^\s\x00-\x1f\x7f]+$/.test(token)) throw new Error('A credencial não pode conter espaços ou caracteres de controle.');
+        if (!janela.sketchup) throw new Error('Abra as etiquetas no SketchUp.');
+        const configuracao = valores();
+        campo('credencial').value = '';
+        janela.estadoSincronizacao({ status: 'sincronizando' });
+        try {
+          janela.sketchup.sincronizar_etiquetas(JSON.stringify({ sync_url, viewer_base_url, token, configuracao }));
+        } catch (_) {
+          janela.estadoSincronizacao({ status: 'configuracao' });
+        }
+      } catch (erro) { mensagem(erro.message); }
+    });
+    campo('botao-atualizar-lote').addEventListener('click', () => {
+      habilitar(false);
+      limparPrevia();
+      if (janela.sketchup) janela.sketchup.atualizar_lote();
+    });
     campo('formulario-etiquetas').addEventListener('submit', evento => {
       evento.preventDefault();
       try {
         const config = valores();
         habilitar(false);
+        limparPrevia();
         if (janela.sketchup) {
           janela.sketchup.salvar_configuracao_etiquetas(JSON.stringify(config));
           janela.sketchup.solicitar_previa(JSON.stringify(config));
@@ -207,6 +281,11 @@
     campo('botao-imprimir').addEventListener('click', () => acao(campo('modo_saida').value, true));
     campo('botao-pdf').addEventListener('click', () => acao('a4', true));
     campo('botao-calibracao').addEventListener('click', () => acao('a4', true, true));
+    ['sync_url', 'viewer_base_url', 'credencial'].forEach(id => campo(id).addEventListener('input', () => {
+      habilitar(false);
+      limparPrevia();
+      mensagem('Configuração alterada. Sincronize novamente para gerar etiquetas.');
+    }));
     habilitar(false);
     Object.keys(PADRAO).forEach(chave => { campo(chave).value = PADRAO[chave]; });
     if (janela.sketchup && janela.sketchup.etiquetas_prontas) janela.sketchup.etiquetas_prontas();

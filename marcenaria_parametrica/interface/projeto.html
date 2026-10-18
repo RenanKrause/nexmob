@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dados do projeto · Nex Mob</title><link rel="stylesheet" href="estilos.css"><link rel="stylesheet" href="projeto.css">
+  <script src="projeto.js" defer></script></head>
+<body><main class="projeto">
+  <header><p>NEX MOB / PROJETO</p><h1>Dados do projeto</h1><p>Cliente e ambientes usados nas etiquetas de todos os móveis.</p></header>
+  <form id="formulario-cliente"><h2>Cliente</h2><label for="cliente">Nome do cliente</label><input id="cliente" type="text" maxlength="200" autocomplete="off"><button type="submit">Salvar cliente</button></form>
+  <form id="formulario-criar-ambiente"><h2>Ambientes</h2><label for="novo-ambiente">Novo ambiente</label><div class="linha"><input id="novo-ambiente" type="text" maxlength="120" required placeholder="Ex.: Cozinha"><button type="submit">Criar</button></div></form>
+  <form id="formulario-renomear-ambiente"><label for="ambiente-projeto">Ambientes do projeto</label><select id="ambiente-projeto"></select>
+    <label for="nome-ambiente">Nome do ambiente selecionado</label><input id="nome-ambiente" type="text" maxlength="120" required>
+    <div class="linha"><button id="botao-renomear-ambiente" type="submit">Renomear</button><button id="botao-excluir-ambiente" type="button">Excluir ambiente</button></div>
+    <p>A exclusão só é permitida quando nenhum móvel utiliza o ambiente. Associe cada móvel no editor do módulo.</p></form>
+  <p id="mensagem-projeto" class="mensagem-edicao" role="status" aria-live="polite"></p>
+</main></body></html>

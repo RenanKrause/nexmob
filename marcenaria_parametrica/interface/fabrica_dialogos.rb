@@ -1,5 +1,11 @@
+require 'json'
+
 module MarcenariaParametrica
   module FabricaDialogos
+    def self.enviar(dialogo, funcao, *argumentos)
+      dialogo.execute_script("window.#{funcao}(#{argumentos.map { |valor| JSON.generate(valor) }.join(',')})") if dialogo
+    end
+
     def self.criar(titulo, arquivo, largura: 440, altura: 640, largura_minima: 360, altura_minima: 430)
       dialogo = UI::HtmlDialog.new(
         dialog_title: "Nex Mob · #{titulo}", preferences_key: "nex_mob.#{arquivo}",

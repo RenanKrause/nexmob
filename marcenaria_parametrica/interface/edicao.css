@@ -54,3 +54,5 @@
 .legenda-editor .amostra-selecao { border-color: #b8433f; background: #f1dedc; }
 .legenda-editor .amostra-previa { background: #c5deda; }
 button:disabled { opacity: .45; cursor: not-allowed; }
+#formulario-metadados-modulo, #formulario-material-peca { display: grid; gap: 8px; margin: 14px 0; }
+#formulario-metadados-modulo input, #formulario-metadados-modulo select, #formulario-material-peca input, #formulario-material-peca select { min-width: 0; width: 100%; border: 1px solid var(--linha); border-radius: 4px; padding: 9px; background: white; color: var(--grafite); }

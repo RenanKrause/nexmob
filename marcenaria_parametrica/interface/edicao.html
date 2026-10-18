@@ -6,6 +6,7 @@
   <link rel="stylesheet" href="estilos.css"><link rel="stylesheet" href="edicao.css">
   <script src="abas_edicao.js" defer></script>
   <script src="selecao_pecas.js" defer></script>
+  <script src="projeto.js" defer></script>
   <script src="edicao.js" defer></script>
 </head>
 <body>
@@ -78,6 +79,19 @@
         <div class="aviso-construcao"><strong>Construção pelo modo salvo</strong><p>Espessuras, fundo e sarrafos são definidos no modo construtivo.</p><button id="botao-modo-construtivo" type="button">Abrir modo construtivo ↗</button><button id="botao-frentes" type="button">Portas e frentes ↗</button></div>
       </section>
       <section id="painel-medidas" role="tabpanel" aria-labelledby="aba-medidas" hidden>
+        <section class="secao-formulario"><h2>Projeto e materiais</h2>
+          <form id="formulario-metadados-modulo">
+            <label for="ambiente-modulo">Ambiente do módulo</label><select id="ambiente-modulo"></select>
+            <label for="material-padrao-modulo">Material padrão do módulo</label><input id="material-padrao-modulo" type="text" required maxlength="200">
+            <button class="botao-secundario" type="submit">Aplicar ambiente e material</button>
+          </form>
+          <form id="formulario-material-peca">
+            <label for="peca-material">Material de uma peça</label><select id="peca-material"></select>
+            <label for="modo-material-peca">Origem do material</label><select id="modo-material-peca"><option value="padrao">Usar material padrão</option><option value="sobrescrito">Substituir nesta peça</option></select>
+            <label for="material-sobrescrito-peca">Material da substituição</label><input id="material-sobrescrito-peca" type="text" maxlength="200" disabled>
+            <p id="material-efetivo-peca" class="instrucao-editor"></p><button id="botao-material-peca" class="botao-secundario" type="submit">Aplicar material à peça</button>
+          </form>
+        </section>
         <form id="formulario-edicao">
           <section class="secao-formulario"><h2>Dimensões do módulo</h2><p class="instrucao-editor">As divisões internas acompanham as novas medidas proporcionalmente.</p>
             <div class="grade-campos">

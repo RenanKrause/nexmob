@@ -25,6 +25,8 @@ module MarcenariaParametrica
       @dialogo = FabricaDialogos.criar('Editar módulo', 'edicao', altura: 690)
       @dialogo.add_action_callback('pronto') { |_contexto| atualizar; ativar_selecao }
       @dialogo.add_action_callback('salvar_edicao') { |_contexto, dados| salvar_medidas(dados) }
+      @dialogo.add_action_callback('salvar_metadados_modulo') { |_contexto, dados| salvar_metadados(dados) }
+      @dialogo.add_action_callback('salvar_material_peca') { |_contexto, dados| salvar_material_peca(dados) }
       @dialogo.add_action_callback('adicionar_elemento') { |_contexto, dados| adicionar_elemento(dados) }
       @dialogo.add_action_callback('selecionar_vao') { |_contexto| ativar_selecao }
       @dialogo.add_action_callback('vista_frontal') { |_contexto| vista_frontal }
@@ -52,6 +54,7 @@ module MarcenariaParametrica
       end
       parametros = ModuloParametrico.parametros(@grupo)
       enviar('receberModulo', parametros)
+      enviar_metadados
       divisoes = PlanoBalcaoInferior.ler_divisoes(@grupo)
       enviar('receberResumo', { vaos: ModuloParametrico.vaos(@grupo).length,
                                 prateleiras: divisoes.count { |item| item['tipo'] == 'prateleira' },
@@ -62,6 +65,78 @@ module MarcenariaParametrica
     end
 
     private
+
+    def pecas_material
+      @grupo.entities.grep(Sketchup::Group).select do |peca|
+        peca.valid? && !peca.get_attribute(IdentidadePeca::DICIONARIO, 'codigo').to_s.empty?
+      end
+    end
+
+    def chave_material(peca)
+      chave = peca.get_attribute(IdentidadePeca::DICIONARIO, 'chave_logica')
+      return chave if chave.is_a?(String) && !chave.empty?
+
+      dados = { codigo: peca.get_attribute(IdentidadePeca::DICIONARIO, 'codigo') }
+      IdentidadePeca::ORIGENS.each { |origem, atributo| dados[origem] = peca.get_attribute(IdentidadePeca::DICIONARIO, atributo) }
+      IdentidadePeca.chave_logica(dados)
+    end
+
+    def enviar_metadados
+      dicionario = PlanoBalcaoInferior::DICIONARIO_MODULO
+      projeto = DadosProjeto.ler(@modelo)
+      pecas = pecas_material.map do |peca|
+        { chave_logica: chave_material(peca), nome: peca.get_attribute(IdentidadePeca::DICIONARIO, 'nome', peca.name),
+          material_padrao: peca.get_attribute(IdentidadePeca::DICIONARIO, 'material_padrao', 'MDP'),
+          material_sobrescrito: peca.get_attribute(IdentidadePeca::DICIONARIO, 'material_sobrescrito', '') }
+      end
+      enviar('receberMetadadosModulo', {
+        ambientes: projeto['ambientes'], ambiente_id: @grupo.get_attribute(dicionario, 'ambiente_id', ''),
+        material_padrao: @grupo.get_attribute(dicionario, 'material_padrao', 'MDP'), pecas: pecas
+      })
+    end
+
+    def salvar_metadados(dados)
+      verificar_modulo
+      unless dados.is_a?(Hash) && dados['material_padrao'].is_a?(String) && !dados['material_padrao'].strip.empty?
+        raise ArgumentError, 'Informe o material padrão do módulo.'
+      end
+      @modelo.start_operation('Ambiente e material do módulo', true)
+      operacao = true
+      DadosProjeto.atribuir_ambiente(@grupo, dados['ambiente_id'])
+      @grupo.set_attribute(PlanoBalcaoInferior::DICIONARIO_MODULO, 'material_padrao', dados['material_padrao'].strip)
+      ConstrutorBalcaoInferior.new(@modelo).atualizar(@grupo, ModuloParametrico.parametros(@grupo), gerenciar_operacao: false)
+      @modelo.commit_operation
+      operacao = false
+      atualizar
+      enviar('confirmarAcao', 'Ambiente e material padrão aplicados ao módulo.')
+    rescue StandardError => erro
+      @modelo.abort_operation if operacao
+      enviar('exibirErro', erro.message)
+    end
+
+    def salvar_material_peca(dados)
+      verificar_modulo
+      unless dados.is_a?(Hash) && dados['chave_logica'].is_a?(String) && dados['material_sobrescrito'].is_a?(String)
+        raise ArgumentError, 'Dados de material inválidos.'
+      end
+      correspondentes = pecas_material.select { |peca| chave_material(peca) == dados['chave_logica'] }
+      raise ArgumentError, 'Selecione novamente uma peça com identidade única.' unless correspondentes.length == 1
+      raise ArgumentError, 'A peça está bloqueada.' if correspondentes.first.locked?
+
+      @modelo.start_operation('Material da peça', true)
+      operacao = true
+      @grupo.make_unique
+      peca = pecas_material.find { |item| chave_material(item) == dados['chave_logica'] }
+      peca.set_attribute(IdentidadePeca::DICIONARIO, 'material_sobrescrito', dados['material_sobrescrito'].strip)
+      peca.set_attribute(IdentidadePeca::DICIONARIO, 'material', IdentidadePeca.material_efetivo(peca))
+      @modelo.commit_operation
+      operacao = false
+      enviar_metadados
+      enviar('confirmarAcao', 'Material da peça aplicado. A substituição será preservada ao reconstruir o módulo.')
+    rescue StandardError => erro
+      @modelo.abort_operation if operacao
+      enviar('exibirErro', erro.message)
+    end
 
     def ativar_selecao
       verificar_modulo
