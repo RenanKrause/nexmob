@@ -45,6 +45,14 @@ module Sketchup
   class << self
     attr_accessor :active_model
   end
+  class Layer
+    attr_accessor :visible, :folder
+    def initialize(visible = true, folder = nil)
+      @visible, @folder = visible, folder
+    end
+    def visible?; @visible; end
+  end
+  class LayerFolder < Layer; end
   class Group
     attr_accessor :name, :locked, :hidden, :transformation, :layer, :valid
     attr_reader :entities, :model, :definition
@@ -52,7 +60,7 @@ module Sketchup
       @model, @name, @locked, @hidden, @valid = modelo, '', false, false, true
       @entities, @atributos = [], {}
       @transformation = Geom::Transformation.new
-      @layer = Struct.new(:visible?).new(true)
+      @layer = Layer.new
       bounds = Struct.new(:width, :height, :depth, :center).new(
         *dimensoes.map { |v| v / 25.4 }, Geom::Point3d.new(*dimensoes.map { |v| v / 50.8 })
       )
@@ -65,9 +73,14 @@ module Sketchup
     def set_attribute(dic, chave, valor); @atributos[[dic, chave]] = valor; end
   end
   class ComponentInstance < Group
-    def initialize(modelo, entidades)
+    def initialize(modelo, entidades, definition: nil)
       super(modelo)
-      @entities.concat(entidades)
+      if definition
+        @definition = definition
+        @entities = definition.entities
+      else
+        @entities.concat(entidades)
+      end
     end
   end
 end

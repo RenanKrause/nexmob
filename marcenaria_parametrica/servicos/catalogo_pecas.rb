@@ -59,7 +59,18 @@ module MarcenariaParametrica
       end
 
       def disponivel?(entidade)
-        entidade.valid? && !entidade.locked? && !entidade.hidden? && entidade.layer.visible?
+        entidade.valid? && !entidade.locked? && !entidade.hidden? && tag_visivel?(entidade.layer)
+      end
+
+      def tag_visivel?(tag)
+        # Layer#visible? não incorpora a visibilidade das pastas que o contêm.
+        # Cada ancestral de grupo/instância passa por esta checagem antes da descida.
+        while tag
+          return false unless tag.visible?
+
+          tag = tag.folder
+        end
+        true
       end
 
       def entidades_de(entidade)
@@ -142,9 +153,10 @@ module MarcenariaParametrica
         numero?(valor) && valor > 0
       end
 
-      # No desenho de fabricação, a borda frontal é a borda superior (top).
+      # Frente e superior são a borda top no desenho de fabricação.
       def fitas(valor)
-        { 'top' => %w[frente todos].include?(valor), 'right' => valor == 'todos',
+        valor = valor.to_s.strip.downcase
+        { 'top' => %w[frente superior todos].include?(valor), 'right' => valor == 'todos',
           'bottom' => valor == 'todos', 'left' => valor == 'todos' }
       end
     end

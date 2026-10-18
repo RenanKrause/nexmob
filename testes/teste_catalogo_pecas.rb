@@ -34,7 +34,7 @@ class TesteCatalogoPecas < Minitest::Test
     peca_em(bom, 'SEM_MEDIDA').set_attribute(PECA, 'comprimento_mm', nil)
     peca_em(bom, 'ZERO', [0, 2, 3])
     peca_em(bom, 'OCULTA').hidden = true
-    peca_em(bom, 'TAG').layer = Struct.new(:visible?).new(false)
+    peca_em(bom, 'TAG').layer = Sketchup::Layer.new(false)
     peca_em(modulo_em).tap { |p| p.model.entities.last.locked = true }
     oculto = Sketchup::Group.new(@modelo)
     oculto.hidden = true
@@ -109,5 +109,58 @@ class TesteCatalogoPecas < Minitest::Test
       peca.transformation = Geom::Transformation.new(matrix)
       assert_empty MarcenariaParametrica::CatalogoPecas.listar(@modelo)
     end
+  end
+
+  def test_contra_frente_de_gaveta_preserva_fita_superior_normalizada
+    modulo = modulo_em
+    peca = peca_em(modulo, 'GAVETA_1_CONTRA_FRENTE', [500, 18, 150])
+    ['superior', ' SUPERIOR '].each do |fita|
+      peca.set_attribute(PECA, 'fita_borda', fita)
+      item = MarcenariaParametrica::CatalogoPecas.listar(@modelo).first
+      assert_equal({ 'top' => true, 'right' => false, 'bottom' => false, 'left' => false }, item[:edge_banding])
+    end
+  end
+
+  def test_peca_em_tag_visivel_com_pasta_ancestral_oculta_nao_e_exportada
+    modulo = modulo_em
+    peca = peca_em(modulo)
+    raiz = Sketchup::LayerFolder.new(false)
+    subpasta = Sketchup::LayerFolder.new(true, raiz)
+    peca.layer = Sketchup::Layer.new(true, subpasta)
+
+    assert_empty MarcenariaParametrica::CatalogoPecas.listar(@modelo)
+    raiz.visible = true
+    assert_equal 1, MarcenariaParametrica::CatalogoPecas.listar(@modelo).length
+    subpasta.visible = false
+    assert_empty MarcenariaParametrica::CatalogoPecas.listar(@modelo)
+  end
+
+  def test_pasta_oculta_na_tag_de_instancia_ancestral_oculta_seus_modulos
+    modulo = modulo_em([])
+    peca_em(modulo)
+    instancia = Sketchup::ComponentInstance.new(@modelo, [modulo])
+    raiz = Sketchup::LayerFolder.new(false)
+    instancia.layer = Sketchup::Layer.new(true, Sketchup::LayerFolder.new(true, raiz))
+    @modelo.entities << instancia
+
+    assert_empty MarcenariaParametrica::CatalogoPecas.listar(@modelo)
+    raiz.visible = true
+    assert_equal 1, MarcenariaParametrica::CatalogoPecas.listar(@modelo).length
+    instancia.hidden = true
+    assert_empty MarcenariaParametrica::CatalogoPecas.listar(@modelo)
+  end
+
+  def test_instancias_da_mesma_definicao_sao_filtradas_pela_propria_cadeia_de_tags
+    modulo = modulo_em([])
+    peca_em(modulo)
+    visivel = Sketchup::ComponentInstance.new(@modelo, [modulo])
+    oculta = Sketchup::ComponentInstance.new(@modelo, [], definition: visivel.definition)
+    pasta = Sketchup::LayerFolder.new(false)
+    oculta.layer = Sketchup::Layer.new(true, pasta)
+    @modelo.entities.concat([oculta, visivel])
+
+    itens = MarcenariaParametrica::CatalogoPecas.listar(@modelo)
+    assert_equal 1, itens.length
+    assert_equal 'LATERAL_ESQUERDA', itens.first[:codigo]
   end
 end
