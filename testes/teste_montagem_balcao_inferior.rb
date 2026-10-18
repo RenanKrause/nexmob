@@ -115,6 +115,40 @@ class ModeloDeTeste
 end
 
 class TesteMontagemBalcaoInferior < Minitest::Test
+  def test_insercao_cria_uuid_uma_vez_e_reconstrucao_preserva_identidade_e_ambiente
+    construtor = MarcenariaParametrica::ConstrutorBalcaoInferior.new(ModeloDeTeste.new)
+    parametros = MarcenariaParametrica::ConstrutorBalcaoInferior::PADRAO
+    grupo = construtor.construir(parametros, [0, 0, 0])
+    dicionario = 'marcenaria_parametrica_modulo'
+    uuid = grupo.get_attribute(dicionario, 'modulo_uuid')
+
+    assert_match(/\A[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\z/, uuid)
+    assert_equal '', grupo.get_attribute(dicionario, 'ambiente_id')
+    grupo.set_attribute(dicionario, 'ambiente_id', 'ambiente-existente')
+    construtor.atualizar(grupo, parametros.merge('largura_mm' => 900))
+
+    assert_equal uuid, grupo.get_attribute(dicionario, 'modulo_uuid')
+    assert_equal 'ambiente-existente', grupo.get_attribute(dicionario, 'ambiente_id')
+    assert_equal 900, grupo.get_attribute(dicionario, 'largura_mm')
+  end
+
+  def test_reconstrucao_inicializa_modulo_antigo_sem_alterar_nome_e_atributos_extras
+    construtor = MarcenariaParametrica::ConstrutorBalcaoInferior.new(ModeloDeTeste.new)
+    grupo = Sketchup::Group.new
+    dicionario = 'marcenaria_parametrica_modulo'
+    grupo.name = 'Balcão personalizado'
+    grupo.set_attribute(dicionario, 'tipo', 'balcao_inferior')
+    grupo.set_attribute(dicionario, 'versao_esquema', 2)
+    grupo.set_attribute(dicionario, 'material_padrao', 'MDF Freijó')
+
+    construtor.atualizar(grupo, MarcenariaParametrica::ConstrutorBalcaoInferior::PADRAO)
+
+    refute_empty grupo.get_attribute(dicionario, 'modulo_uuid')
+    assert_equal '', grupo.get_attribute(dicionario, 'ambiente_id')
+    assert_equal 'Balcão personalizado', grupo.name
+    assert_equal 'MDF Freijó', grupo.get_attribute(dicionario, 'material_padrao')
+  end
+
   def test_pecas_ocupam_as_coordenadas_planejadas
     modelo = ModeloDeTeste.new
     construtor = MarcenariaParametrica::ConstrutorBalcaoInferior.new(modelo)

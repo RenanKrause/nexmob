@@ -1,6 +1,7 @@
 require_relative '../dominio/plano_balcao_inferior'
 require_relative '../dominio/plano_gavetas'
 require_relative '../dominio/plano_frentes'
+require_relative '../dominio/modulo_parametrico'
 require_relative 'fabrica_chapas'
 
 module MarcenariaParametrica
@@ -84,6 +85,7 @@ module MarcenariaParametrica
       pecas = plano + PlanoGavetas.planejar(valores, divisoes, gavetas) + PlanoFrentes.planejar(valores, divisoes, gavetas, frentes)
       pecas.each { |peca| FabricaChapas.criar(grupo.entities, peca) }
       grupo.set_attribute(DICIONARIO_MODULO, 'tipo', TIPO)
+      ModuloParametrico.inicializar(grupo)
       grupo.set_attribute(DICIONARIO_MODULO, 'versao_esquema', 2)
       grupo.set_attribute(DICIONARIO_MODULO, 'divisoes_json', JSON.generate(divisoes))
       grupo.set_attribute(DICIONARIO_MODULO, PlanoGavetas::DICIONARIO_GAVETAS, JSON.generate(gavetas))
