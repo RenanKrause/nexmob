@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Etiquetas e QR · Nex Mob</title><link rel="stylesheet" href="etiquetas.css"></head>
+<body>
+  <header><p>NEX MOB / FABRICAÇÃO</p><h1>Etiquetas e QR</h1><span id="contagem-etiquetas">Aguardando projeto</span></header>
+  <main>
+    <form id="formulario-etiquetas">
+      <fieldset><legend>Tamanho ativo da etiqueta térmica</legend><div class="campos">
+        <label>Largura (mm)<input id="largura_mm" type="number" step="0.1" min="1" required></label>
+        <label>Altura (mm)<input id="altura_mm" type="number" step="0.1" min="1" required></label>
+        <label>QR (mm)<input id="qr_mm" type="number" step="0.1" min="20" required></label>
+        <label>Texto (pt)<input id="texto_pt" type="number" step="0.1" min="6" required></label>
+      </div></fieldset>
+      <fieldset><legend>A4 · A4350 / 2 × 5 etiquetas</legend>
+        <p>99 × 55,8 mm por etiqueta. Imprima a 100%, sem ajustar à página.</p><div class="campos">
+          <label>Deslocamento X (mm)<input id="offset_x_mm" type="number" step="0.1" min="-6" max="6" required></label>
+          <label>Deslocamento Y (mm)<input id="offset_y_mm" type="number" step="0.1" min="-9" max="9" required></label>
+        </div><button type="button" id="botao-calibracao">Imprimir folha de calibração</button>
+      </fieldset>
+      <button type="submit">Salvar configuração e atualizar</button>
+    </form>
+    <section class="saida" aria-label="Prévia e impressão">
+      <div class="acoes"><label>Saída<select id="modo_saida"><option value="termica">Térmica · uma etiqueta por página</option><option value="a4">A4 A4350 · dez etiquetas por página</option></select></label>
+        <button id="botao-previa" type="button" disabled>Prévia</button><button id="botao-imprimir" type="button" disabled>Imprimir</button><button id="botao-pdf" type="button" disabled>Gerar PDF</button></div>
+      <p id="mensagem-etiquetas" role="status" aria-live="polite">Sincronize o projeto para preparar as etiquetas.</p>
+      <iframe id="previa-etiquetas" title="Prévia das etiquetas no tamanho real"></iframe>
+    </section>
+  </main>
+  <script src="vendor/qrcode.js"></script><script src="etiquetas.js"></script>
+</body></html>
